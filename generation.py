@@ -92,26 +92,28 @@ def mergeMazeGeneration(screen, maze, width, height):
             south = getSouth2(posX, posY)
             west = getWest2(posX, posY)
 
-            if (
-                checkCaseGen(north, maze, width, height)
-                and maze[north[0]][north[1]] != maze[posX][posY]
-            ):
-                possibleCases.append(north)
-            if (
-                checkCaseGen(east, maze, width, height)
-                and maze[east[0]][east[1]] != maze[posX][posY]
-            ):
-                possibleCases.append(east)
-            if (
-                checkCaseGen(south, maze, width, height)
-                and maze[south[0]][south[1]] != maze[posX][posY]
-            ):
-                possibleCases.append(south)
-            if (
-                checkCaseGen(west, maze, width, height)
-                and maze[west[0]][west[1]] != maze[posX][posY]
-            ):
-                possibleCases.append(west)
+            # Generate probabilities for the directions
+            chance = 25
+            if checkCaseGen(north, maze, width, height):
+                if maze[north[0]][north[1]] != maze[posX][posY]:
+                    possibleCases.append(north)
+                elif randint(0, 100) < chance:
+                    possibleCases.append(north)
+            if checkCaseGen(east, maze, width, height):
+                if maze[east[0]][east[1]] != maze[posX][posY]:
+                    possibleCases.append(east)
+                elif randint(0, 100) < chance:
+                    possibleCases.append(east)
+            if checkCaseGen(south, maze, width, height):
+                if maze[south[0]][south[1]] != maze[posX][posY]:
+                    possibleCases.append(south)
+                elif randint(0, 100) < chance:
+                    possibleCases.append(south)
+            if checkCaseGen(west, maze, width, height):
+                if maze[west[0]][west[1]] != maze[posX][posY]:
+                    possibleCases.append(west)
+                elif randint(0, 100) < chance:
+                    possibleCases.append(west)
 
         # On choisi une case aléatoire parmis les cases possibles
         nextCase = possibleCases[randint(0, len(possibleCases) - 1)]
