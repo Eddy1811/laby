@@ -48,7 +48,7 @@ def getFixedWidth(width, height):
 
 
 # Function to render the labyrinth
-def printLabyrinth(screen, laby, randomColor=False, shortestPath=[]):
+def printLabyrinth(screen, laby, randomColor=False, shortestPath=[], BFS=False):
     sizeX = len(laby)
     sizeY = len(laby[0])
 
@@ -68,6 +68,20 @@ def printLabyrinth(screen, laby, randomColor=False, shortestPath=[]):
                 # Add a random color, but same color for the same number
                 if randomColor:
                     color = hash(str(laby[j][i])) % 255 + 16
+
+                # If BFS is running, color the visited cells, from yellow to red, the farther the redder
+                if BFS and (laby[j][i] == VISITED or str(laby[j][i]).isdigit()):
+                    if str(laby[j][i]).isdigit():
+                        if int(laby[j][i]) > 100:
+                            color = Screen.COLOUR_CYAN
+                        elif int(laby[j][i]) > 60:
+                            color = Screen.COLOUR_BLUE
+                        elif int(laby[j][i]) > 30:
+                            color = Screen.COLOUR_RED
+                        elif int(laby[j][i]) > 10:
+                            color = Screen.COLOUR_MAGENTA
+                        elif int(laby[j][i]) > 0:
+                            color = Screen.COLOUR_YELLOW
 
                 if [j, i] in shortestPath:
                     color = Screen.COLOUR_GREEN
@@ -118,11 +132,11 @@ def displayShortestPath(screen, maze, goal):
 
         x, y = nextCase[0], nextCase[1]
 
-        printStep(screen, maze, shortestPath=shortestPath)
+        printStep(screen, maze, shortestPath=shortestPath, BFS=True)
 
     # Color the start
     shortestPath.append([x, y])
-    printStep(screen, maze, shortestPath=shortestPath)
+    printStep(screen, maze, shortestPath=shortestPath, BFS=True)
     sleep(1)
 
     # Remove all number except the shortest path
@@ -131,7 +145,7 @@ def displayShortestPath(screen, maze, goal):
             if maze[i][j] != WALL and [i, j] not in shortestPath:
                 maze[i][j] = EMPTY
 
-    printStep(screen, maze, shortestPath=shortestPath)
+    printStep(screen, maze, shortestPath=shortestPath, BFS=True)
 
 
 def colorAt(screen, maze, pos, color):
@@ -153,11 +167,11 @@ def checkCaseIsDigit(maze, pos):
     return str(maze[x][y]).isdigit() and str(maze[x][y]) != WALL
 
 
-def printStep(screen, maze, randomColor=False, shortestPath=[]):
+def printStep(screen, maze, randomColor=False, shortestPath=[], BFS=False):
     if screen.has_resized():
         screen.clear()
         screen.refresh()
     # screen.clear()
     # sleep(0.1)
-    printLabyrinth(screen, maze, randomColor, shortestPath)
+    printLabyrinth(screen, maze, randomColor, shortestPath, BFS)
     screen.refresh()

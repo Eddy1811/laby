@@ -3,6 +3,7 @@ from display import (
     EMPTY,
     GOAL,
     BADWAY,
+    VISITED,
     displayShortestPath,
 )
 
@@ -145,6 +146,11 @@ def BFS(screen, maze, start=[0, 0], step=0):
     queue.append(start)
     while queue:
         curPos = queue.pop(0)
+        while (
+            str(maze[curPos[0]][curPos[1]]).isdigit()
+            or maze[curPos[0]][curPos[1]] == VISITED
+        ):
+            curPos = queue.pop(0)
         x = curPos[0]
         y = curPos[1]
         if maze[x][y] == GOAL:
@@ -169,5 +175,5 @@ def BFS(screen, maze, start=[0, 0], step=0):
             nextCase = getWest(x, y)
             queue.append(nextCase)
         visit(maze, curPos, step)
-        printStep(screen, maze)
+        printStep(screen, maze, BFS=True)
         step += 1
