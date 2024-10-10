@@ -1,22 +1,21 @@
 from asciimatics.screen import Screen
-from asciimatics.renderers import StaticRenderer
-from time import sleep
 import re
+from time import sleep
 
 # Labyrinth Symbols
+EMPTY = "▮"
 WALL = "■"
-EMPTY = "□"
 VISITED = "▫"
 BADWAY = "⛝"
 GOAL = "⚿"
 
 # Define the colors (asciimatics uses integers for colors)
 COLOR_MAP = {
-    "■": Screen.COLOUR_RED,  # WALL
-    "□": Screen.COLOUR_GREEN,  # EMPTY
+    "▮": Screen.COLOUR_BLACK,  # WALL
+    "■": Screen.COLOUR_WHITE,  # EMPTY
     "▫": Screen.COLOUR_CYAN,  # VISITED
     "⛝": Screen.COLOUR_YELLOW,  # BADWAY
-    "⚿": Screen.COLOUR_BLUE,  # GOAL
+    "⚿": Screen.COLOUR_GREEN,  # GOAL
 }
 
 
@@ -24,7 +23,7 @@ COLOR_MAP = {
 def checkBounds(maze, x, y):
     sizeX = len(maze)
     sizeY = len(maze[0])
-    return x < sizeX and y < sizeY
+    return x < sizeX and y < sizeY and x >= 0 and y >= 0
 
 
 def getNorth(x, y):
@@ -71,10 +70,10 @@ def printLabyrinth(screen, laby, randomColor=False, shortestPath=[]):
                     color = hash(str(laby[j][i])) % 255 + 16
 
                 if [j, i] in shortestPath:
-                    color = Screen.COLOUR_CYAN
+                    color = Screen.COLOUR_GREEN
 
                 screen.print_at(
-                    f"{laby[j][i]:^{fixedWidth}}",
+                    f"{laby[j][i]}".center(fixedWidth),
                     j * fixedWidth,
                     i,
                     colour=color,
@@ -124,6 +123,15 @@ def displayShortestPath(screen, maze, goal):
     # Color the start
     shortestPath.append([x, y])
     printStep(screen, maze, shortestPath=shortestPath)
+    sleep(1)
+
+    # Remove all number except the shortest path
+    for i in range(len(maze)):
+        for j in range(len(maze[i])):
+            if maze[i][j] != WALL and [i, j] not in shortestPath:
+                maze[i][j] = EMPTY
+
+    printStep(screen, maze, shortestPath=shortestPath)
 
 
 def colorAt(screen, maze, pos, color):
@@ -146,9 +154,10 @@ def checkCaseIsDigit(maze, pos):
 
 
 def printStep(screen, maze, randomColor=False, shortestPath=[]):
+    if screen.has_resized():
+        screen.clear()
+        screen.refresh()
     # screen.clear()
+    # sleep(0.1)
     printLabyrinth(screen, maze, randomColor, shortestPath)
-
-
-# sleep(0.1)
-
+    screen.refresh()

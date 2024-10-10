@@ -10,7 +10,7 @@ from display import (
 def checkBounds(maze, x, y):
     sizeX = len(maze)
     sizeY = len(maze[0])
-    return x < sizeX and y < sizeY
+    return x < sizeX and y < sizeY and x >= 0 and y >= 0
 
 
 def getNorth(x, y):
@@ -34,16 +34,14 @@ def checkCase(maze, x, y):
 
 
 def checkCaseVec(maze, vec2):
-    sizeX = len(maze)
-    sizeY = len(maze[0])
-    if vec2[0] >= sizeX or vec2[1] >= sizeY or vec2[0] < 0 or vec2[1] < 0:
+    if not checkBounds(maze, vec2[0], vec2[1]):
         return False
     return maze[vec2[0]][vec2[1]] == EMPTY or maze[vec2[0]][vec2[1]] == GOAL
 
 
 def visit(maze, pos, step):
-    if step < 10:
-        step = f"0{step}"
+    # if step < 10:
+    #    step = f"0{step}"
     maze[pos[0]][pos[1]] = step
 
 

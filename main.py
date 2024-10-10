@@ -1,4 +1,6 @@
 import os
+from time import sleep
+from display import printLabyrinth
 
 from asciimatics.screen import Screen
 
@@ -43,13 +45,24 @@ def saveLabyrinthToFile(lab, filename="labyrinth.txt"):
 
 
 def Main(screen):
-    sizeX = 65
-    sizeY = 65
+    sizeX = 35
+    sizeY = 35
+
+    # Common settings for screen
+    screen.clear()
+    screen.refresh()
+    screen.set_title("Maze Solver")
 
     lab = generateLabyrinth(sizeX, sizeY)
     mergeMazeGeneration(screen, lab, sizeX, sizeY)
     clearLabyrinth(lab)
     [start, goal] = addRandomStartAndGoal(lab, sizeX, sizeY)
+
+    screen.clear()
+    printLabyrinth(screen, lab)
+
+    # Escape spaces in start position
+    start = str(start).replace(" ", "\\ ")
 
     if not start:
         raise ValueError("The 'start' variable is empty or invalid")
@@ -69,11 +82,29 @@ def Main(screen):
     bfs = pwd + "/bfs.py"
     dfs = pwd + "/dfs.py"
 
-    # Run DFS and BFS in different terminal in parallel
-    cmd = f"gnome-terminal --maximize -- bash -c 'source {pwd}/.venv/bin/activate; python {bfs} \"{str(start)}\"'"
-    os.system(cmd)
-    cmd = f"gnome-terminal --maximize -- bash -c 'source {pwd}/.venv/bin/activate; python {dfs} \"{str(start)}\"'"
-    os.system(cmd)
+    # Check if Windows Terminal (wt.exe) is installed
+    if os.system("wt.exe --version") != 0:
+        raise Exception(
+            "Windows Terminal (wt.exe) is not installed or not found in PATH"
+        )
+
+    # Get current working directory
+    pwd = os.getcwd()
+
+    # Define the commands to run DFS and BFS scripts in parallel
+    bfs_cmd = f"bash -c 'source {pwd}/.venv/bin/activate && python {bfs} {start}'"
+    dfs_cmd = f"bash -c 'source {pwd}/.venv/bin/activate && python {dfs} {start}'"
+
+    # Run DFS and BFS in different Windows Terminal tabs in parallel
+    os.system(f"wt.exe -w -1 nt --title 'BFS' {bfs_cmd}")
+    os.system(f"wt.exe -w -1 nt --title 'DFS' {dfs_cmd}")
+
+    while True:
+        if screen.has_resized():
+            screen.clear()
+            screen.refresh()
+            printLabyrinth(screen, lab)
+            sleep(0.1)
 
 
 if __name__ == "__main__":

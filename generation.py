@@ -62,6 +62,7 @@ def generationDone(maze, width, height):
     for i in range(width):
         if maze[i][0] != WALL:
             value = maze[i][0]
+            break
     for i in range(width):
         for j in range(height):
             if maze[i][j] != WALL and maze[i][j] != value:
@@ -136,7 +137,7 @@ def mergeMazeGeneration(screen, maze, width, height):
             else:
                 wallDeleteY = posY - 1
 
-        # On supprime le mur et on change la valeur de la case
+        # On supprime le mur et on change la valeur de la case TODO
         for x in range(len(maze)):
             for y in range(len(maze[x])):
                 case = maze[x][y]

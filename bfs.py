@@ -1,6 +1,8 @@
 from asciimatics.screen import Screen
 from solver import BFS
 import sys
+from time import sleep
+from display import printLabyrinth
 
 
 def readLabyrinthFromFile(filename="labyrinth.txt"):
@@ -21,17 +23,16 @@ def runBFS(screen):
     start = sys.argv[1]
     start = convertStringToPosition(start)
 
-    path = []
-
-    ev = screen.get_key()
-    while ev != ord("q"):
-        ev = screen.get_key()
     BFS(screen, lab, start)
 
-    ev = screen.get_key()
-    while ev != ord("q"):
-        ev = screen.get_key()
+    while True:
+        if screen.has_resized():
+            screen.clear()
+            screen.refresh()
+            printLabyrinth(screen, lab)
+            sleep(0.1)
 
 
 if __name__ == "__main__":
+    input("Press Enter to start the simulation...")
     Screen.wrapper(runBFS)
