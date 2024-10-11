@@ -1,7 +1,4 @@
-import os
-import threading
 from time import sleep
-from display import printLabyrinth
 from asciimatics.scene import Scene
 from asciimatics.widgets import Frame, TextBox, Layout, Label, Text, Button, Divider
 from asciimatics.exceptions import StopApplication
@@ -12,7 +9,8 @@ from generation import (
     clearLabyrinth,
     addRandomStartAndGoal,
 )
-from display import printLabyrinth
+
+from display import LabyrinthEffect, LabyrinthScene, printStep
 from solver import BFS, DFS
 
 
@@ -25,6 +23,8 @@ class MazeInputFrame(Frame):
             has_border=True,
             name="Maze Input Form",
         )
+
+        self.set_theme("bright")
 
         # Initialize self.data to store the width and height
         self.data = {"width": "", "height": ""}
@@ -97,14 +97,13 @@ class MazeInputFrame(Frame):
 
 
 class SolverMenuFrame(Frame):
-    def __init__(self, screen, lab, start):
+    def __init__(self, screen, lab):
         super(SolverMenuFrame, self).__init__(
             screen, screen.height, screen.width, has_border=False
         )
 
+        self.set_theme("bright")
         self.lab = lab
-        self.start = start
-        self.goal = (len(lab) - 1, len(lab[0]) - 1)  # Goal position
 
         # Layout for menu options
         layout = Layout([1], fill_frame=True)
@@ -114,15 +113,29 @@ class SolverMenuFrame(Frame):
         layout.add_widget(self.message_label)
 
         # Buttons to select BFS and DFS
+        layout.add_widget(Button("Run Generation", self.run_generation))
         layout.add_widget(Button("Run BFS", self.run_bfs))
         layout.add_widget(Button("Run DFS", self.run_dfs))
         layout.add_widget(Button("Quit", self.quit))
-        printLabyrinth(screen, lab)
+        self.maze_effect = LabyrinthEffect(self.screen, self.lab)
+
         self.fix()
+
+    def run_generation(self):
+        # Generate the maze
+        mergeMazeGeneration(self.screen, self.lab, len(self.lab), len(self.lab[0]))
+        clearLabyrinth(self.lab)
+        sizeX = len(self.lab)
+        sizeY = len(self.lab[0])
+        [start, goal] = addRandomStartAndGoal(self.lab, sizeX, sizeY)
+        self.start = start
+        self.screen.force_update()
+        sleep(3)
 
     def run_bfs(self):
         # Run the BFS algorithm
         BFS(self.screen, self.lab, self.start)
+        printStep(self.screen, self.lab, self.maze_effect)
         self.screen.force_update()
         sleep(2)  # Wait a moment to let user see the output
         clearLabyrinth(self.lab)
@@ -130,8 +143,9 @@ class SolverMenuFrame(Frame):
     def run_dfs(self):
         # Run the DFS algorithm
         DFS(self.screen, self.lab, self.start)
-        sleep(2)  # Wait a moment to let user see the output
+        printStep(self.screen, self.lab, self.maze_effect)
         self.screen.force_update()
+        sleep(2)  # Wait a moment to let user see the output
         clearLabyrinth(self.lab)
 
     def quit(self):
@@ -156,17 +170,12 @@ def Main(screen):
     # Common settings for screen
     screen.clear()
     screen.refresh()
-    # screen.set_title("Maze Solver")
 
     # Generate maze and start/end positions
     lab = generateLabyrinth(sizeX, sizeY)
-    mergeMazeGeneration(screen, lab, sizeX, sizeY)
-    clearLabyrinth(lab)
-    [start, goal] = addRandomStartAndGoal(lab, sizeX, sizeY)
-    printLabyrinth(screen, lab)
-    sleep(3)
-    # Create a frame to show BFS and DFS in parallel
-    solver_frame = SolverMenuFrame(screen, lab, start)
+
+    # Clear the screen and display the solver menu
+    solver_frame = SolverMenuFrame(screen, lab)
     scene = Scene([solver_frame], -1)
 
     # Play the solver menu
