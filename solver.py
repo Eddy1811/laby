@@ -3,6 +3,7 @@ from display import (
     EMPTY,
     GOAL,
     BADWAY,
+    VISITED,
     displayShortestPath,
 )
 
@@ -100,6 +101,7 @@ def DFS(screen, maze, start=[0, 0], step=0):
     x = curPos[0]
     y = curPos[1]
 
+    path = []
     if step == 0:
         visit(maze, curPos, step)
         step += 1
@@ -123,11 +125,13 @@ def DFS(screen, maze, start=[0, 0], step=0):
             path.pop()
             printStep(screen, maze)
             step += 1
+            if len(path) == 0:
+                raise Exception("No solution")
             curPos = path[len(path) - 1]
             continue
 
         if maze[nextCase[0]][nextCase[1]] == GOAL:
-            visit(maze, nextCase, step)
+            # visit(maze, nextCase, step)
             path.append(nextCase)
             # print("WIN")
             # print("Longueur du chemin trouvé: ", len(path) - 1)
@@ -141,19 +145,25 @@ def DFS(screen, maze, start=[0, 0], step=0):
 
 
 def BFS(screen, maze, start=[0, 0], step=0):
+    path = []
     queue = []
     queue.append(start)
     while queue:
         curPos = queue.pop(0)
+        while (
+            str(maze[curPos[0]][curPos[1]]).isdigit()
+            or maze[curPos[0]][curPos[1]] == VISITED
+        ):
+            curPos = queue.pop(0)
         x = curPos[0]
         y = curPos[1]
         if maze[x][y] == GOAL:
             # print("WIN")
             # print("Longueur du chemin trouvé: ", step)
-            visit(maze, curPos, step)
+            # visit(maze, curPos, step)
             printStep(screen, maze)
 
-            displayShortestPath(screen, maze, curPos)
+            displayShortestPath(screen, maze, curPos, path)
             # Return goal coordinates
             return curPos
         if checkCaseVec(maze, getNorth(x, y)):
@@ -169,5 +179,5 @@ def BFS(screen, maze, start=[0, 0], step=0):
             nextCase = getWest(x, y)
             queue.append(nextCase)
         visit(maze, curPos, step)
-        printStep(screen, maze)
+        printStep(screen, maze, BFS=True)
         step += 1
