@@ -4,18 +4,20 @@ from time import sleep
 
 # Labyrinth Symbols
 EMPTY = "▮"
-WALL = "■"
-VISITED = "▫"
-BADWAY = "⛝"
-GOAL = "⚿"
+WALL = "🟫"
+VISITED = "🐾"
+BADWAY = "🍫"
+GOAL = "🦴"
+START = "🐶"
 
 # Define the colors (asciimatics uses integers for colors)
 COLOR_MAP = {
-    "▮": Screen.COLOUR_BLACK,  # WALL
-    "■": Screen.COLOUR_WHITE,  # EMPTY
-    "▫": Screen.COLOUR_CYAN,  # VISITED
-    "⛝": Screen.COLOUR_YELLOW,  # BADWAY
-    "⚿": Screen.COLOUR_GREEN,  # GOAL
+    "🟫": Screen.COLOUR_WHITE,  # WALL
+    "▮": Screen.COLOUR_BLACK,  # EMPTY
+    "🐾": Screen.COLOUR_CYAN,  # VISITED
+    "🍫": Screen.COLOUR_YELLOW,  # BADWAY
+    "🦴": Screen.COLOUR_GREEN,  # GOAL
+    "🦑": Screen.COLOUR_RED,  # START
 }
 
 
@@ -47,10 +49,21 @@ def getFixedWidth(width, height):
     return len(str(totalSize))
 
 
-# Function to render the labyrinth
 def printLabyrinth(screen, laby, randomColor=False, shortestPath=[], BFS=False):
+    # Get original dimensions of the maze
     sizeX = len(laby)
     sizeY = len(laby[0])
+
+    # Add walls around the maze
+    # Add walls to the left and right of each row
+    laby_with_walls = [[WALL] + row + [WALL] for row in laby]
+    # Add top and bottom wall rows
+    top_bottom_wall_row = [WALL] * (sizeX + 2)
+    laby_with_walls = [top_bottom_wall_row] + laby_with_walls + [top_bottom_wall_row]
+
+    # Update sizeX and sizeY to the new dimensions
+    sizeX = len(laby_with_walls)
+    sizeY = len(laby_with_walls[0])
 
     # Calculate the fixed width of each cell (equals to the number of characters in the biggest cell)
     fixedWidth = getFixedWidth(sizeX, sizeY)
@@ -58,36 +71,39 @@ def printLabyrinth(screen, laby, randomColor=False, shortestPath=[], BFS=False):
     # Loop through each row
     for i in range(sizeY):
         for j in range(sizeX):
-            cell = laby[j][i]
+            cell = laby_with_walls[j][i]
             color = COLOR_MAP.get(cell, Screen.COLOUR_WHITE)
 
             # Handle cases where the cell contains a number or letter
-            if re.match("^[0-9]*$", str(laby[j][i])) or re.match(
-                "^[A-Z]*$", str(laby[j][i])
-            ):
+            if re.match("^[0-9]*$", str(cell)) or re.match("^[A-Z]*$", str(cell)):
                 # Add a random color, but same color for the same number
                 if randomColor:
-                    color = hash(str(laby[j][i])) % 255 + 16
+                    color = hash(str(cell)) % 255 + 16
 
                 # If BFS is running, color the visited cells, from yellow to red, the farther the redder
-                if BFS and (laby[j][i] == VISITED or str(laby[j][i]).isdigit()):
-                    if str(laby[j][i]).isdigit():
-                        if int(laby[j][i]) > 100:
+                if BFS and (cell == VISITED or str(cell).isdigit()):
+                    if str(cell).isdigit():
+                        if int(cell) > 100 * fixedWidth:
                             color = Screen.COLOUR_CYAN
-                        elif int(laby[j][i]) > 60:
+                        elif int(cell) > 60 * fixedWidth:
                             color = Screen.COLOUR_BLUE
-                        elif int(laby[j][i]) > 30:
+                        elif int(cell) > 30 * fixedWidth:
                             color = Screen.COLOUR_RED
-                        elif int(laby[j][i]) > 10:
+                        elif int(cell) > 10 * fixedWidth:
                             color = Screen.COLOUR_MAGENTA
-                        elif int(laby[j][i]) > 0:
+                        elif int(cell) > 0:
                             color = Screen.COLOUR_YELLOW
 
                 if [j, i] in shortestPath:
                     color = Screen.COLOUR_GREEN
+                    cell = VISITED
+                # Remove spaces from the start and goal only to test
+                cellWithoutSpaces = str(cell).replace(" ", "")
+                if cellWithoutSpaces == "0":
+                    cell = START
 
                 screen.print_at(
-                    f"{laby[j][i]}".center(fixedWidth),
+                    f"{cell}".center(fixedWidth),
                     j * fixedWidth,
                     i,
                     colour=color,
@@ -97,15 +113,16 @@ def printLabyrinth(screen, laby, randomColor=False, shortestPath=[], BFS=False):
                 screen.print_at(
                     cell.center(fixedWidth), j * fixedWidth, i, colour=color
                 )
+
     screen.refresh()
 
 
-def displayShortestPath(screen, maze, goal):
+def displayShortestPath(screen, maze, goal, path):
     curPos = goal
     x, y = curPos[0], curPos[1]
     shortestPath = []
-    while str(maze[x][y]) != "00":
-        shortestPath.append([x, y])
+    while str(maze[x][y]) != "0":
+        shortestPath.append([x + 1, y + 1])
 
         possibleMoves = []
         if checkCaseIsDigit(maze, getNorth(x, y)):
@@ -135,17 +152,17 @@ def displayShortestPath(screen, maze, goal):
         printStep(screen, maze, shortestPath=shortestPath, BFS=True)
 
     # Color the start
-    shortestPath.append([x, y])
+    # shortestPath.append([x + 1, y + 1])
     printStep(screen, maze, shortestPath=shortestPath, BFS=True)
-    sleep(1)
+    # sleep(1)
 
-    # Remove all number except the shortest path
-    for i in range(len(maze)):
-        for j in range(len(maze[i])):
-            if maze[i][j] != WALL and [i, j] not in shortestPath:
-                maze[i][j] = EMPTY
-
-    printStep(screen, maze, shortestPath=shortestPath, BFS=True)
+    # # Remove all number except the shortest path
+    #    for i in range(len(maze)):
+    #        for j in range(len(maze[i])):
+    #            if maze[i][j] != WALL and [i, j] not in shortestPath:
+    #                maze[i][j] = EMPTY
+    #
+    # printStep(screen, maze, shortestPath=shortestPath, BFS=True)
 
 
 def colorAt(screen, maze, pos, color):
@@ -164,7 +181,9 @@ def checkCaseIsDigit(maze, pos):
     x, y = pos[0], pos[1]
     if not checkBounds(maze, x, y):
         return False
-    return str(maze[x][y]).isdigit() and str(maze[x][y]) != WALL
+    return (str(maze[x][y]).isdigit() or maze[x][y] == VISITED) and str(
+        maze[x][y]
+    ) != WALL
 
 
 def printStep(screen, maze, randomColor=False, shortestPath=[], BFS=False):

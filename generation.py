@@ -1,7 +1,7 @@
 from random import randint
 import re
 
-from display import printStep, WALL, EMPTY, VISITED, GOAL
+from display import printStep, WALL, EMPTY, VISITED, GOAL, START
 
 
 def getNorth2(x, y):
@@ -160,7 +160,7 @@ def mergeMazeGeneration(screen, maze, width, height):
 def clearLabyrinth(lab):
     for i in range(len(lab)):
         for j in range(len(lab[i])):
-            if lab[i][j] != WALL:
+            if lab[i][j] != WALL and lab[i][j] != START and lab[i][j] != GOAL:
                 lab[i][j] = EMPTY
 
 
@@ -171,6 +171,6 @@ def addRandomStartAndGoal(maze, width, height):
         start = [randint(0, width - 1), randint(0, height - 1)]
     while maze[goal[0]][goal[1]] == WALL:
         goal = [randint(0, width - 1), randint(0, height - 1)]
-    maze[start[0]][start[1]] = "S"
+    maze[start[0]][start[1]] = START
     maze[goal[0]][goal[1]] = GOAL
     return [start, goal]
