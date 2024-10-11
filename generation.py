@@ -1,7 +1,16 @@
 from random import randint
 import re
 
-from display import printStep, WALL, EMPTY, VISITED, GOAL, START, LabyrinthEffect
+from display import (
+    LabyrinthScene,
+    printStep,
+    WALL,
+    EMPTY,
+    VISITED,
+    GOAL,
+    START,
+    LabyrinthEffect,
+)
 
 
 def getNorth2(x, y):
@@ -70,11 +79,11 @@ def generationDone(maze, width, height):
     return True
 
 
-def mergeMazeGeneration(screen, maze, width, height):
+def mergeMazeGeneration(screen, maze, width, height, maze_effect):
     posX = -1
     posY = -1
     value = " "
-    maze_effect = LabyrinthEffect(screen, maze)
+    screen.clear()
     # Tant que la case n'est pas un chiffre ou qu'il n'y a pas de cases possibles
     # On en cherche une nouvelle
     # On regarde si les cases autour de la case sont de la même valeur

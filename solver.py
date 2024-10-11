@@ -151,6 +151,8 @@ def DFS(screen, maze, start=[0, 0], step=0):
 def BFS(screen, maze, start=[0, 0], step=0):
     queue = []
     maze_effect = LabyrinthEffect(screen, maze)
+    screen.force_update()
+
     queue.append(start)
     while queue:
         curPos = queue.pop(0)

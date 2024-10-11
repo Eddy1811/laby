@@ -101,7 +101,6 @@ class SolverMenuFrame(Frame):
         super(SolverMenuFrame, self).__init__(
             screen, screen.height, screen.width, has_border=False
         )
-
         self.set_theme("bright")
         self.lab = lab
 
@@ -123,10 +122,14 @@ class SolverMenuFrame(Frame):
 
     def run_generation(self):
         # Generate the maze
-        mergeMazeGeneration(self.screen, self.lab, len(self.lab), len(self.lab[0]))
-        clearLabyrinth(self.lab)
         sizeX = len(self.lab)
         sizeY = len(self.lab[0])
+        self.screen.play(
+            [LabyrinthScene(self.screen, self.maze_effect)], stop_on_resize=True
+        )
+        mergeMazeGeneration(self.screen, self.lab, sizeX, sizeY, self.maze_effect)
+        sleep(2)  # Wait a moment to let user see the output
+        clearLabyrinth(self.lab)
         [start, goal] = addRandomStartAndGoal(self.lab, sizeX, sizeY)
         self.start = start
         self.screen.force_update()
