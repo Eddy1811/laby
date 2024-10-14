@@ -7,11 +7,9 @@ GOAL = "🦴"
 START = "🐶"
 
 
-def printStep(screen, maze, maze_effect, shortestPath=[], BFS=False, randomColor=False):
+def printStep(screen, maze, maze_effect, shortestPath=[], randomColor=False):
     """Update the maze and refresh the screen."""
-    maze_effect.update_maze(
-        maze, randomColor=randomColor, BFS=BFS, shortestPath=shortestPath
-    )
+    maze_effect.update_maze(maze, randomColor=randomColor, shortestPath=shortestPath)
 
 
 def checkBounds(maze, x, y):
@@ -171,7 +169,7 @@ def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
             # print("WIN")
             # print("Longueur du chemin trouvé: ", step)
             # visit(maze, curPos, step)
-            printStep(screen, maze, BFS=True, maze_effect=maze_effect)
+            printStep(screen, maze, maze_effect=maze_effect)
 
             # displayShortestPath(screen, maze, curPos, path)
             # Return goal coordinates
@@ -190,5 +188,5 @@ def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
             nextCase = getWest(x, y)
             queue.append(nextCase)
         visit(maze, curPos, step)
-        printStep(screen, maze, maze_effect, BFS=True)
+        printStep(screen, maze, maze_effect)
         step += 1

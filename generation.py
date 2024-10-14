@@ -11,10 +11,12 @@ GOAL = "🦴"
 START = "🐶"
 
 
-def printStep(maze, maze_effect, shortestPath=[], BFS=False, randomColor=False):
+def printStep(maze, maze_effect, randomColor=False, shortestPath=[]):
     """Update the maze and refresh the screen."""
     maze_effect.update_maze(
-        maze, randomColor=randomColor, BFS=BFS, shortestPath=shortestPath
+        maze,
+        randomColor=randomColor,
+        shortestPath=shortestPath,
     )
 
 
@@ -251,5 +253,5 @@ def displayShortestPath(maze, goal, maze_effect):
 
         x, y = nextCase[0], nextCase[1]
 
-        printStep(maze, shortestPath=shortestPath, BFS=True, maze_effect=maze_effect)
+        printStep(maze, maze_effect=maze_effect, shortestPath=shortestPath)
     return shortestPath

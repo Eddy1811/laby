@@ -121,12 +121,11 @@ class MazeInputFrame(Frame):
 
 class SolverMenuFrame(Frame):
     def __init__(self, screen, sizeX, sizeY):
-        lab = generateLabyrinth(sizeX, sizeY)
         super(SolverMenuFrame, self).__init__(
             screen, screen.height, screen.width, has_border=True
         )
         self.set_theme("bright")
-        self.maze = lab
+        self.maze = generateLabyrinth(sizeX, sizeY)
         self.generator = None
         self.BFS = False
         self.DFS = False
@@ -156,10 +155,10 @@ class SolverMenuFrame(Frame):
         super(SolverMenuFrame, self)._update(frame_no)
         self._print_maze(self._screen)
 
-    def update_maze(
-        self, maze, randomColor=False, BFS=False, DFS=False, shortestPath=[]
-    ):
+    def update_maze(self, maze, randomColor=False, shortestPath=[]):
         """Update the maze being rendered."""
+        if shortestPath:
+            self.shortestPath = shortestPath
         self.maze = maze
         self._print_maze(self._screen, randomColor)
         self._screen.refresh()
@@ -235,6 +234,12 @@ class SolverMenuFrame(Frame):
         # Generate the maze
         sizeX = len(self.maze)
         sizeY = len(self.maze[0])
+
+        self.BFS = False
+        self.DFS = False
+        self.shortestPath = []
+
+        self.maze = generateLabyrinth(sizeX, sizeY)
 
         mergeMazeGeneration(self.maze, sizeX, sizeY, self)
 
