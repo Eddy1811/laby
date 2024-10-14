@@ -1,16 +1,44 @@
 from random import randint
 import re
 
-from display import (
-    LabyrinthScene,
-    printStep,
-    WALL,
-    EMPTY,
-    VISITED,
-    GOAL,
-    START,
-    LabyrinthEffect,
-)
+
+# Labyrinth Symbols
+EMPTY = "▮"
+WALL = "🟫"
+VISITED = "🐾"
+BADWAY = "🍫"
+GOAL = "🦴"
+START = "🐶"
+
+
+def printStep(maze, maze_effect, shortestPath=[], BFS=False, randomColor=False):
+    """Update the maze and refresh the screen."""
+    maze_effect.update_maze(
+        maze, randomColor=randomColor, BFS=BFS, shortestPath=shortestPath
+    )
+
+
+# Helper functions
+def checkBounds(maze, x, y):
+    sizeX = len(maze)
+    sizeY = len(maze[0])
+    return x < sizeX and y < sizeY and x >= 0 and y >= 0
+
+
+def getNorth(x, y):
+    return [x, y - 1]
+
+
+def getSouth(x, y):
+    return [x, y + 1]
+
+
+def getEast(x, y):
+    return [x + 1, y]
+
+
+def getWest(x, y):
+    return [x - 1, y]
 
 
 def getNorth2(x, y):
@@ -79,11 +107,11 @@ def generationDone(maze, width, height):
     return True
 
 
-def mergeMazeGeneration(screen, maze, width, height, maze_effect):
+def mergeMazeGeneration(maze, width, height, maze_effect):
     posX = -1
     posY = -1
     value = " "
-    screen.clear()
+    # screen.clear()
     # Tant que la case n'est pas un chiffre ou qu'il n'y a pas de cases possibles
     # On en cherche une nouvelle
     # On regarde si les cases autour de la case sont de la même valeur
@@ -162,9 +190,7 @@ def mergeMazeGeneration(screen, maze, width, height, maze_effect):
         maze[nextX][nextY] = value
         maze[wallDeleteX][wallDeleteY] = value
 
-        printStep(screen, maze, maze_effect)
-
-    return maze
+        printStep(maze, maze_effect, randomColor=True)
 
 
 def clearLabyrinth(lab):
@@ -184,3 +210,46 @@ def addRandomStartAndGoal(maze, width, height):
     maze[start[0]][start[1]] = START
     maze[goal[0]][goal[1]] = GOAL
     return [start, goal]
+
+
+def checkCaseIsDigit(maze, pos):
+    x, y = pos[0], pos[1]
+    if not checkBounds(maze, x, y):
+        return False
+    return (str(maze[x][y]).isdigit() or maze[x][y] == VISITED) and str(
+        maze[x][y]
+    ) != WALL
+
+
+def displayShortestPath(maze, goal, maze_effect):
+    curPos = goal
+    x, y = curPos[0], curPos[1]
+    shortestPath = []
+    while str(maze[x][y]) != "0" or maze[x][y] == START:
+        shortestPath.append([x + 1, y + 1])
+
+        possibleMoves = []
+        if checkCaseIsDigit(maze, getNorth(x, y)):
+            possibleMoves.append(getNorth(x, y))
+        if checkCaseIsDigit(maze, getEast(x, y)):
+            possibleMoves.append(getEast(x, y))
+        if checkCaseIsDigit(maze, getSouth(x, y)):
+            possibleMoves.append(getSouth(x, y))
+        if checkCaseIsDigit(maze, getWest(x, y)):
+            possibleMoves.append(getWest(x, y))
+
+        nextCase = None
+        min_val = 10000000
+        for move in possibleMoves:
+            moveValue = int(maze[move[0]][move[1]])
+            if moveValue < min_val:
+                nextCase = move
+                min_val = moveValue
+
+        if nextCase is None:
+            return
+
+        x, y = nextCase[0], nextCase[1]
+
+        printStep(maze, shortestPath=shortestPath, BFS=True, maze_effect=maze_effect)
+    return shortestPath

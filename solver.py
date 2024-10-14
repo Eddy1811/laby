@@ -1,11 +1,17 @@
-from display import (
-    printStep,
-    EMPTY,
-    GOAL,
-    BADWAY,
-    VISITED,
-    LabyrinthEffect,
-)
+# Labyrinth Symbols
+EMPTY = "▮"
+WALL = "🟫"
+VISITED = "🐾"
+BADWAY = "🍫"
+GOAL = "🦴"
+START = "🐶"
+
+
+def printStep(screen, maze, maze_effect, shortestPath=[], BFS=False, randomColor=False):
+    """Update the maze and refresh the screen."""
+    maze_effect.update_maze(
+        maze, randomColor=randomColor, BFS=BFS, shortestPath=shortestPath
+    )
 
 
 def checkBounds(maze, x, y):
@@ -97,7 +103,7 @@ path = []
 
 
 # Non récursif
-def DFS(screen, maze, start=[0, 0], step=0):
+def DFS(screen, maze, maze_effect, start=[0, 0], step=0):
     curPos = start
     x = curPos[0]
     y = curPos[1]
@@ -107,7 +113,6 @@ def DFS(screen, maze, start=[0, 0], step=0):
         visit(maze, curPos, step)
         step += 1
         path.append(curPos)
-        maze_effect = LabyrinthEffect(screen, maze)
         printStep(screen, maze, maze_effect)
 
     while maze[x][y] != GOAL:
@@ -125,7 +130,6 @@ def DFS(screen, maze, start=[0, 0], step=0):
         else:
             badWay(maze, curPos)
             path.pop()
-            maze_effect = LabyrinthEffect(screen, maze)
             printStep(screen, maze, maze_effect)
             step += 1
             if len(path) == 0:
@@ -142,15 +146,13 @@ def DFS(screen, maze, start=[0, 0], step=0):
 
         path.append(nextCase)
         visit(maze, nextCase, step)
-        maze_effect = LabyrinthEffect(screen, maze)
         printStep(screen, maze, maze_effect)
         step += 1
         curPos = nextCase
 
 
-def BFS(screen, maze, start=[0, 0], step=0):
+def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
     queue = []
-    maze_effect = LabyrinthEffect(screen, maze)
     screen.force_update()
 
     queue.append(start)
@@ -169,11 +171,12 @@ def BFS(screen, maze, start=[0, 0], step=0):
             # print("WIN")
             # print("Longueur du chemin trouvé: ", step)
             # visit(maze, curPos, step)
-            printStep(screen, maze, maze_effect)
+            printStep(screen, maze, BFS=True, maze_effect=maze_effect)
 
             # displayShortestPath(screen, maze, curPos, path)
             # Return goal coordinates
-            return curPos
+            # return curPos
+            return
         if checkCaseVec(maze, getNorth(x, y)):
             nextCase = getNorth(x, y)
             queue.append(nextCase)
@@ -187,5 +190,5 @@ def BFS(screen, maze, start=[0, 0], step=0):
             nextCase = getWest(x, y)
             queue.append(nextCase)
         visit(maze, curPos, step)
-        printStep(screen, maze, maze_effect)
+        printStep(screen, maze, maze_effect, BFS=True)
         step += 1
