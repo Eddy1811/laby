@@ -1,5 +1,16 @@
 from asciimatics.screen import Screen
-import re
+from asciimatics.scene import Scene
+from asciimatics.widgets import Frame, Layout, Label, Text, Button, Divider
+from asciimatics.exceptions import StopApplication
+from generation import (
+    generateLabyrinth,
+    mergeMazeGeneration,
+    clearLabyrinth,
+    addRandomStartAndGoal,
+    displayShortestPath,
+)
+from maze_widget import MazeWidget
+from solver import BFS, DFS
 from time import sleep
 
 # Labyrinth Symbols
@@ -17,31 +28,8 @@ COLOR_MAP = {
     "🐾": Screen.COLOUR_CYAN,  # VISITED
     "🍫": Screen.COLOUR_YELLOW,  # BADWAY
     "🦴": Screen.COLOUR_GREEN,  # GOAL
-    "🦑": Screen.COLOUR_RED,  # START
+    "🐶": Screen.COLOUR_RED,  # START
 }
-
-
-# Helper functions
-def checkBounds(maze, x, y):
-    sizeX = len(maze)
-    sizeY = len(maze[0])
-    return x < sizeX and y < sizeY and x >= 0 and y >= 0
-
-
-def getNorth(x, y):
-    return [x, y - 1]
-
-
-def getSouth(x, y):
-    return [x, y + 1]
-
-
-def getEast(x, y):
-    return [x + 1, y]
-
-
-def getWest(x, y):
-    return [x - 1, y]
 
 
 def getFixedWidth(width, height):
@@ -49,148 +37,215 @@ def getFixedWidth(width, height):
     return len(str(totalSize))
 
 
-def printLabyrinth(screen, laby, randomColor=False, shortestPath=[], BFS=False):
-    # Get original dimensions of the maze
-    sizeX = len(laby)
-    sizeY = len(laby[0])
+class MazeInputFrame(Frame):
+    def __init__(self, screen, input_data):
+        super(MazeInputFrame, self).__init__(
+            screen,
+            screen.height // 2,
+            screen.width // 2,
+            has_border=True,
+            name="Maze Input Form",
+        )
 
-    # Add walls around the maze
-    # Add walls to the left and right of each row
-    laby_with_walls = [[WALL] + row + [WALL] for row in laby]
-    # Add top and bottom wall rows
-    top_bottom_wall_row = [WALL] * (sizeX + 2)
-    laby_with_walls = [top_bottom_wall_row] + laby_with_walls + [top_bottom_wall_row]
+        self.set_theme("bright")
 
-    # Update sizeX and sizeY to the new dimensions
-    sizeX = len(laby_with_walls)
-    sizeY = len(laby_with_walls[0])
+        # Initialize self.data to store the width and height
+        self.data = {"width": "", "height": ""}
+        self.input_data = (
+            input_data  # Reference to external dictionary to store final input
+        )
 
-    # Calculate the fixed width of each cell (equals to the number of characters in the biggest cell)
-    fixedWidth = getFixedWidth(sizeX, sizeY)
+        # Layout to organize widgets
+        layout = Layout([1], fill_frame=True)
+        self.add_layout(layout)
 
-    # Loop through each row
-    for i in range(sizeY):
-        for j in range(sizeX):
-            cell = laby_with_walls[j][i]
-            color = COLOR_MAP.get(cell, Screen.COLOUR_WHITE)
+        # Add widgets to the layout
+        self.message_label = Label("")
+        layout.add_widget(self.message_label)
 
-            # Handle cases where the cell contains a number or letter
-            if re.match("^[0-9]*$", str(cell)) or re.match("^[A-Z]*$", str(cell)):
-                # Add a random color, but same color for the same number
-                if randomColor:
-                    color = hash(str(cell)) % 255 + 16
+        layout.add_widget(Label("Enter maze width (odd number >= 5):"))
+        self.width_input = Text("Width:", "width")
+        layout.add_widget(self.width_input)
 
-                # If BFS is running, color the visited cells, from yellow to red, the farther the redder
-                if BFS and (cell == VISITED or str(cell).isdigit()):
-                    if str(cell).isdigit():
-                        if int(cell) > 100 * fixedWidth:
-                            color = Screen.COLOUR_CYAN
-                        elif int(cell) > 60 * fixedWidth:
-                            color = Screen.COLOUR_BLUE
-                        elif int(cell) > 30 * fixedWidth:
-                            color = Screen.COLOUR_RED
-                        elif int(cell) > 10 * fixedWidth:
-                            color = Screen.COLOUR_MAGENTA
-                        elif int(cell) > 0:
-                            color = Screen.COLOUR_YELLOW
+        layout.add_widget(Label("Enter maze height (odd number >= 5):"))
+        self.height_input = Text("Height:", "height")
+        layout.add_widget(self.height_input)
 
-                if [j, i] in shortestPath:
-                    color = Screen.COLOUR_GREEN
-                    cell = VISITED
-                # Remove spaces from the start and goal only to test
-                cellWithoutSpaces = str(cell).replace(" ", "")
-                if cellWithoutSpaces == "0":
-                    cell = START
+        # Button to submit the form
+        layout.add_widget(Button("Submit", self._submit))
 
-                screen.print_at(
-                    f"{cell}".center(fixedWidth),
-                    j * fixedWidth,
-                    i,
-                    colour=color,
+        # Finalize layout
+        self.fix()
+
+    def _submit(self):
+        # Save the input data
+        self.save()
+
+        try:
+            # Check if the self.data is None
+            if not self.data:
+                self.message_label.text = (
+                    "Please enter valid integers for width and height!"
                 )
-            else:
-                # Get the corresponding character and color
-                screen.print_at(
-                    cell.center(fixedWidth), j * fixedWidth, i, colour=color
-                )
+                self.screen.force_update()
+                return
 
-    screen.refresh()
+            # Retrieve width and height and validate them
+            width = int(self.data["width"])
+            height = int(self.data["height"])
 
+            if width < 5 or width % 2 == 0:
+                self.message_label.text = "Width must be an odd number >= 5!"
+                self.screen.force_update()
+                return
 
-def displayShortestPath(screen, maze, goal, path):
-    curPos = goal
-    x, y = curPos[0], curPos[1]
-    shortestPath = []
-    while str(maze[x][y]) != "0":
-        shortestPath.append([x + 1, y + 1])
+            if height < 5 or height % 2 == 0:
+                self.message_label.text = "Height must be an odd number >= 5!"
+                self.screen.force_update()
+                return
 
-        possibleMoves = []
-        if checkCaseIsDigit(maze, getNorth(x, y)):
-            possibleMoves.append(getNorth(x, y))
-        if checkCaseIsDigit(maze, getEast(x, y)):
-            possibleMoves.append(getEast(x, y))
-        if checkCaseIsDigit(maze, getSouth(x, y)):
-            possibleMoves.append(getSouth(x, y))
-        if checkCaseIsDigit(maze, getWest(x, y)):
-            possibleMoves.append(getWest(x, y))
+            # If input is valid, store it in the external dictionary
+            self.input_data["width"] = width
+            self.input_data["height"] = height
+            # If input is valid, print the values and exit the form
+            print(f"Maze width: {width}, Maze height: {height}")
+            raise StopApplication("User submitted the form")
 
-        nextCase = None
-        min_val = 10000000
-        for move in possibleMoves:
-            moveValue = int(maze[move[0]][move[1]])
-            if moveValue < min_val:
-                nextCase = move
-                min_val = moveValue
-
-        if nextCase is None:
-            screen.print_at("No path found", 0, len(maze[0]) + 1)
-            screen.refresh()
-            return
-
-        x, y = nextCase[0], nextCase[1]
-
-        printStep(screen, maze, shortestPath=shortestPath, BFS=True)
-
-    # Color the start
-    # shortestPath.append([x + 1, y + 1])
-    printStep(screen, maze, shortestPath=shortestPath, BFS=True)
-    # sleep(1)
-
-    # # Remove all number except the shortest path
-    #    for i in range(len(maze)):
-    #        for j in range(len(maze[i])):
-    #            if maze[i][j] != WALL and [i, j] not in shortestPath:
-    #                maze[i][j] = EMPTY
-    #
-    # printStep(screen, maze, shortestPath=shortestPath, BFS=True)
+        except ValueError:
+            # Handle non-integer input
+            self.message_label.text = (
+                "Please enter valid integers for width and height!"
+            )
+            self.screen.force_update()
 
 
-def colorAt(screen, maze, pos, color):
-    x, y = pos[0], pos[1]
-    fixedWidth = getFixedWidth(len(maze), len(maze[0]))
-    cell_value = str(maze[x][y]).center(fixedWidth)
-    screen.print_at(cell_value, x * fixedWidth, y, colour=color)
+class SolverMenuFrame(Frame):
+    def __init__(self, screen, sizeX, sizeY):
+        super(SolverMenuFrame, self).__init__(
+            screen,
+            screen.height,
+            screen.width,
+            has_border=True,
+            name="Maze Solver",
+            reduce_cpu=False,
+        )
+        self.set_theme("bright")
+        self.maze = generateLabyrinth(sizeX, sizeY)
+        self.generator = None
+        self.BFS = False
+        self.DFS = False
+        self.shortestPath = []
+        self.buffer = []
+
+        # Layout for menu options
+        layout = Layout([2], fill_frame=True)
+
+        self.add_layout(layout)
+
+        self.message_label = Label("Select the algorithm to run:")
+        layout.add_widget(self.message_label, 0)
+
+        # Buttons to select BFS and DFS
+        layout.add_widget(Button("Run Generation", self.run_generation), 0)
+        layout.add_widget(Button("Run BFS", self.run_bfs), 0)
+        layout.add_widget(Button("Run DFS", self.run_dfs), 0)
+        layout.add_widget(Button("Quit", self.quit), 0)
+
+        self.maze_widget = MazeWidget(self.maze, sizeX, sizeY)
+        # Maze display
+        layout.add_widget(Divider(), 0)
+        layout.add_widget(Label("Maze:"), 0)
+        layout.add_widget(self.maze_widget, 0)
+        self.fix()
+
+    def _update(self, frame_no):
+        super(SolverMenuFrame, self)._update(frame_no)
+        # self.update_maze(self.maze, randomColor=False, shortestPath=self.shortestPath)
+        if self.maze_widget.needs_update:
+            self.maze_widget.update(frame_no)
+            self._screen.refresh()
+
+    # sleep(1 / self.maze_widget.max_fps)
+
+    def update_maze(self, maze, randomColor=False, shortestPath=[]):
+        """Update the maze being rendered."""
+        if shortestPath:
+            self.shortestPath = shortestPath
+        self.maze_widget.BFS = self.BFS
+        self.maze_widget.shortestPath = self.shortestPath
+        self.maze_widget.randomColor = randomColor
+        self.maze_widget.compute(maze)
+
+    def run_generation(self):
+        sizeX = len(self.maze)
+        sizeY = len(self.maze[0])
+        self.maze_widget.needs_update = False
+
+        self.BFS = False
+        self.DFS = False
+        self.shortestPath = []
+
+        self.maze = generateLabyrinth(sizeX, sizeY)
+        mergeMazeGeneration(self.maze, sizeX, sizeY, self)
+
+        [start, goal] = addRandomStartAndGoal(self.maze, sizeX, sizeY)
+        self.start = start
+        self.goal = goal
+        clearLabyrinth(self.maze)
+
+        self.update_maze(self.maze)
+        self.maze_widget.needs_update = True
+
+    def run_bfs(self):
+        # Run the BFS algorithm
+        clearLabyrinth(self.maze)
+        self.BFS = True
+        self.DFS = False
+        self.shortestPath = []
+        self.maze_widget.needs_update = False
+        self.update_maze(self.maze)
+
+        # check if self.start is defined
+        if not hasattr(self, "start"):
+            [start, goal] = addRandomStartAndGoal(
+                self.maze, len(self.maze), len(self.maze[0])
+            )
+            self.start = start
+
+        BFS(self.screen, self.maze, maze_effect=self, start=self.start)
+
+        sleep(0.5)  # Wait a moment to let user see the output
+
+        self.shortestPath = displayShortestPath(self.maze, self.goal, maze_effect=self)
+        self.maze_widget.needs_update = True
+
+    def run_dfs(self):
+        self.DFS = True
+        self.BFS = False
+        self.shortestPath = []
+        self.update_maze(self.maze)
+        self.maze_widget.needs_update = False
+
+        clearLabyrinth(self.maze)
+        # check if self.start is defined
+        if not hasattr(self, "start"):
+            [start, goal] = addRandomStartAndGoal(
+                self.maze, len(self.maze), len(self.maze[0])
+            )
+            self.start = start
+
+        # Run the DFS algorithm
+        DFS(self.screen, self.maze, self, self.start)
+        self.maze_widget.needs_update = True
+
+    def quit(self):
+        raise StopApplication("User chose to quit")
 
 
-def getValueWithoutColor(value):
-    # Remove color codes if present
-    return re.sub(r"\033\[[0-9;]*m", "", value)
+# Scene that combine the maze and the solver menu to be displayed
+class MazeSolverScene(Scene):
+    def __init__(self, screen, sizeX, sizeY):
+        # Split the screen into two parts
+        effects = [SolverMenuFrame(screen, sizeX, sizeY)]
 
-
-def checkCaseIsDigit(maze, pos):
-    x, y = pos[0], pos[1]
-    if not checkBounds(maze, x, y):
-        return False
-    return (str(maze[x][y]).isdigit() or maze[x][y] == VISITED) and str(
-        maze[x][y]
-    ) != WALL
-
-
-def printStep(screen, maze, randomColor=False, shortestPath=[], BFS=False):
-    if screen.has_resized():
-        screen.clear()
-        screen.refresh()
-    # screen.clear()
-    # sleep(0.1)
-    printLabyrinth(screen, maze, randomColor, shortestPath, BFS)
-    screen.refresh()
+        super(MazeSolverScene, self).__init__(effects, -1, name="Maze Solver Scene")
