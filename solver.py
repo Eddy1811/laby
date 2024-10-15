@@ -7,7 +7,7 @@ GOAL = "🦴"
 START = "🐶"
 
 
-def printStep(screen, maze, maze_effect, shortestPath=[], randomColor=False):
+def printStep(maze, maze_effect, shortestPath=[], randomColor=False):
     """Update the maze and refresh the screen."""
     maze_effect.update_maze(maze, randomColor=randomColor, shortestPath=shortestPath)
 
@@ -111,7 +111,7 @@ def DFS(screen, maze, maze_effect, start=[0, 0], step=0):
         visit(maze, curPos, step)
         step += 1
         path.append(curPos)
-        printStep(screen, maze, maze_effect)
+        printStep(maze, maze_effect)
 
     while maze[x][y] != GOAL:
         x = curPos[0]
@@ -128,7 +128,7 @@ def DFS(screen, maze, maze_effect, start=[0, 0], step=0):
         else:
             badWay(maze, curPos)
             path.pop()
-            printStep(screen, maze, maze_effect)
+            printStep(maze, maze_effect)
             step += 1
             if len(path) == 0:
                 raise Exception("No solution")
@@ -144,7 +144,7 @@ def DFS(screen, maze, maze_effect, start=[0, 0], step=0):
 
         path.append(nextCase)
         visit(maze, nextCase, step)
-        printStep(screen, maze, maze_effect)
+        printStep(maze, maze_effect)
         step += 1
         curPos = nextCase
 
@@ -169,7 +169,7 @@ def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
             # print("WIN")
             # print("Longueur du chemin trouvé: ", step)
             # visit(maze, curPos, step)
-            printStep(screen, maze, maze_effect=maze_effect)
+            printStep(maze, maze_effect=maze_effect)
 
             # displayShortestPath(screen, maze, curPos, path)
             # Return goal coordinates
@@ -188,5 +188,5 @@ def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
             nextCase = getWest(x, y)
             queue.append(nextCase)
         visit(maze, curPos, step)
-        printStep(screen, maze, maze_effect)
+        printStep(maze, maze_effect)
         step += 1

@@ -31,7 +31,7 @@ def Main(screen):
     # Clear the screen and display the solver menu
     scene = MazeSolverScene(screen, sizeX, sizeY)
     # Play the solver menu
-    screen.play([scene], stop_on_resize=True)
+    screen.play([scene])
 
     # After finishing with the menu
     # screen.clear()

@@ -1,5 +1,4 @@
 from random import randint
-import re
 
 
 # Labyrinth Symbols
@@ -119,44 +118,32 @@ def mergeMazeGeneration(maze, width, height, maze_effect):
     # On regarde si les cases autour de la case sont de la même valeur
     # Si non, on ajoute les cases possibles
     # On en choisi une aléatoirement
-    while not generationDone(maze, width, height):
+    done = False
+    while not done:
         possibleCases = []
-        while not re.match("^[0-9]*$", str(value)) or len(possibleCases) == 0:
+        while not str(value).isdigit() or len(possibleCases) == 0:
             possibleCases = []
             posX = randint(0, width - 1)
             posY = randint(0, height - 1)
             value = maze[posX][posY]
 
-            north = getNorth2(posX, posY)
-            east = getEast2(posX, posY)
-            south = getSouth2(posX, posY)
-            west = getWest2(posX, posY)
+            directions = [
+                getNorth2(posX, posY),
+                getEast2(posX, posY),
+                getSouth2(posX, posY),
+                getWest2(posX, posY),
+            ]
+            chance = randint(0, 100)
 
-            # Generate probabilities for the directions
-            chance = 25
-            if checkCaseGen(north, maze, width, height):
-                if maze[north[0]][north[1]] != maze[posX][posY]:
-                    possibleCases.append(north)
-                elif randint(0, 100) < chance:
-                    possibleCases.append(north)
-            if checkCaseGen(east, maze, width, height):
-                if maze[east[0]][east[1]] != maze[posX][posY]:
-                    possibleCases.append(east)
-                elif randint(0, 100) < chance:
-                    possibleCases.append(east)
-            if checkCaseGen(south, maze, width, height):
-                if maze[south[0]][south[1]] != maze[posX][posY]:
-                    possibleCases.append(south)
-                elif randint(0, 100) < chance:
-                    possibleCases.append(south)
-            if checkCaseGen(west, maze, width, height):
-                if maze[west[0]][west[1]] != maze[posX][posY]:
-                    possibleCases.append(west)
-                elif randint(0, 100) < chance:
-                    possibleCases.append(west)
+            for direction in directions:
+                if checkCaseGen(direction, maze, width, height):
+                    if maze[direction[0]][direction[1]] != value or chance < 25:
+                        possibleCases.append(direction)
 
         # On choisi une case aléatoire parmis les cases possibles
         nextCase = possibleCases[randint(0, len(possibleCases) - 1)]
+
+        # for nextCase in possibleCases:
         nextX = nextCase[0]
         nextY = nextCase[1]
 
@@ -179,19 +166,24 @@ def mergeMazeGeneration(maze, width, height, maze_effect):
             else:
                 wallDeleteY = posY - 1
 
-        # On supprime le mur et on change la valeur de la case TODO
-        for x in range(len(maze)):
-            for y in range(len(maze[x])):
-                case = maze[x][y]
-                if (
-                    [x, y] != [nextX, nextY]
-                    and case == maze[nextX][nextY]
-                    and case != WALL
-                ):
-                    maze[x][y] = value
-        maze[nextX][nextY] = value
-        maze[wallDeleteX][wallDeleteY] = value
+        # to update the value of the cells in the path to the minimum value
+        # This is done to ensure that the maze is solvable
+        min = maze[posX][posY]
+        if maze[nextX][nextY] < min:
+            min = maze[nextX][nextY]
+        max = maze[posX][posY]
+        if maze[nextX][nextY] > max:
+            max = maze[nextX][nextY]
+        done = True
+        for i in range(width):
+            for j in range(height):
+                if maze[i][j] == max:
+                    maze[i][j] = min
+                if done and (str(maze[i][j]) != "0" and maze[i][j] != WALL):
+                    done = False
 
+        # On supprime le mur
+        maze[wallDeleteX][wallDeleteY] = min
         printStep(maze, maze_effect, randomColor=True)
 
 
