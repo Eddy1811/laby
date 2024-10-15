@@ -11,7 +11,7 @@ from generation import (
 )
 from maze_widget import MazeWidget
 from solver import BFS, DFS
-from time import sleep
+import time
 
 # Labyrinth Symbols
 EMPTY = "▮"
@@ -129,6 +129,7 @@ class SolverMenuFrame(Frame):
             name="Maze Solver",
             reduce_cpu=False,
         )
+
         self.set_theme("bright")
         self.maze = generateLabyrinth(sizeX, sizeY)
         self.generator = None
@@ -138,24 +139,24 @@ class SolverMenuFrame(Frame):
         self.buffer = []
 
         # Layout for menu options
-        layout = Layout([2], fill_frame=True)
+        self.layout = Layout([2], fill_frame=True)
 
-        self.add_layout(layout)
+        self.add_layout(self.layout)
 
         self.message_label = Label("Select the algorithm to run:")
-        layout.add_widget(self.message_label, 0)
+        self.layout.add_widget(self.message_label, 0)
 
         # Buttons to select BFS and DFS
-        layout.add_widget(Button("Run Generation", self.run_generation), 0)
-        layout.add_widget(Button("Run BFS", self.run_bfs), 0)
-        layout.add_widget(Button("Run DFS", self.run_dfs), 0)
-        layout.add_widget(Button("Quit", self.quit), 0)
+        self.layout.add_widget(Button("Run Generation", self.run_generation), 0)
+        self.layout.add_widget(Button("Run BFS", self.run_bfs), 0)
+        self.layout.add_widget(Button("Run DFS", self.run_dfs), 0)
+        self.layout.add_widget(Button("Quit", self.quit), 0)
 
         self.maze_widget = MazeWidget(self.maze, sizeX, sizeY)
         # Maze display
-        layout.add_widget(Divider(), 0)
-        layout.add_widget(Label("Maze:"), 0)
-        layout.add_widget(self.maze_widget, 0)
+        self.layout.add_widget(Divider(), 0)
+        self.layout.add_widget(Label("Maze:"), 0)
+        self.layout.add_widget(self.maze_widget, 0)
         self.fix()
 
     def _update(self, frame_no):
@@ -213,8 +214,6 @@ class SolverMenuFrame(Frame):
             self.start = start
 
         BFS(self.screen, self.maze, maze_effect=self, start=self.start)
-
-        sleep(0.5)  # Wait a moment to let user see the output
 
         self.shortestPath = displayShortestPath(self.maze, self.goal, maze_effect=self)
         self.maze_widget.needs_update = True
