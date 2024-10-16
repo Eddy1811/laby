@@ -1,10 +1,5 @@
 # Labyrinth Symbols
-EMPTY = "▮"
-WALL = "🟫"
-VISITED = "🐾"
-BADWAY = "🍫"
-GOAL = "🦴"
-START = "🐶"
+from maze_constants import EMPTY, VISITED, BADWAY, GOAL
 
 
 def printStep(maze, maze_effect, shortestPath=[], randomColor=False):

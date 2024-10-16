@@ -1,13 +1,5 @@
 from random import randint
-
-
-# Labyrinth Symbols
-EMPTY = "▮"
-WALL = "🟫"
-VISITED = "🐾"
-BADWAY = "🍫"
-GOAL = "🦴"
-START = "🐶"
+from maze_constants import WALL, VISITED, START, GOAL, EMPTY
 
 
 def printStep(maze, maze_effect, randomColor=False, shortestPath=[]):
@@ -137,7 +129,7 @@ def mergeMazeGeneration(maze, width, height, maze_effect):
 
             for direction in directions:
                 if checkCaseGen(direction, maze, width, height):
-                    if maze[direction[0]][direction[1]] != value or chance < 25:
+                    if maze[direction[0]][direction[1]] != value or chance < 10:
                         possibleCases.append(direction)
 
         # On choisi une case aléatoire parmis les cases possibles
@@ -187,10 +179,12 @@ def mergeMazeGeneration(maze, width, height, maze_effect):
         printStep(maze, maze_effect, randomColor=True)
 
 
-def clearLabyrinth(lab):
+def clearLabyrinth(lab, clearStartAndGoal=False):
     for i in range(len(lab)):
         for j in range(len(lab[i])):
-            if lab[i][j] != WALL and lab[i][j] != START and lab[i][j] != GOAL:
+            if lab[i][j] != WALL and (
+                lab[i][j] != START and lab[i][j] != GOAL or clearStartAndGoal
+            ):
                 lab[i][j] = EMPTY
 
 

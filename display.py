@@ -1,4 +1,3 @@
-from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.widgets import Frame, Layout, Label, Text, Button, Divider
 from asciimatics.exceptions import StopApplication
@@ -12,24 +11,6 @@ from generation import (
 from maze_widget import MazeWidget
 from solver import BFS, DFS
 import time
-
-# Labyrinth Symbols
-EMPTY = "▮"
-WALL = "🟫"
-VISITED = "🐾"
-BADWAY = "🍫"
-GOAL = "🦴"
-START = "🐶"
-
-# Define the colors (asciimatics uses integers for colors)
-COLOR_MAP = {
-    "🟫": Screen.COLOUR_WHITE,  # WALL
-    "▮": Screen.COLOUR_BLACK,  # EMPTY
-    "🐾": Screen.COLOUR_CYAN,  # VISITED
-    "🍫": Screen.COLOUR_YELLOW,  # BADWAY
-    "🦴": Screen.COLOUR_GREEN,  # GOAL
-    "🐶": Screen.COLOUR_RED,  # START
-}
 
 
 def getFixedWidth(width, height):
@@ -94,12 +75,12 @@ class MazeInputFrame(Frame):
             width = int(self.data["width"])
             height = int(self.data["height"])
 
-            if width < 5 or width % 2 == 0:
+            if width < 5:
                 self.message_label.text = "Width must be an odd number >= 5!"
                 self.screen.force_update()
                 return
 
-            if height < 5 or height % 2 == 0:
+            if height < 5:
                 self.message_label.text = "Height must be an odd number >= 5!"
                 self.screen.force_update()
                 return
@@ -127,7 +108,6 @@ class SolverMenuFrame(Frame):
             screen.width,
             has_border=True,
             name="Maze Solver",
-            reduce_cpu=False,
         )
 
         self.set_theme("bright")
@@ -137,6 +117,8 @@ class SolverMenuFrame(Frame):
         self.DFS = False
         self.shortestPath = []
         self.buffer = []
+
+        self.buffer_iterator = 0
 
         # Layout for menu options
         self.layout = Layout([2], fill_frame=True)
@@ -148,6 +130,9 @@ class SolverMenuFrame(Frame):
 
         # Buttons to select BFS and DFS
         self.layout.add_widget(Button("Run Generation", self.run_generation), 0)
+        self.layout.add_widget(
+            Button("New Start and Goal", self.run_place_start_and_goal), 0
+        )
         self.layout.add_widget(Button("Run BFS", self.run_bfs), 0)
         self.layout.add_widget(Button("Run DFS", self.run_dfs), 0)
         self.layout.add_widget(Button("Quit", self.quit), 0)
@@ -172,10 +157,23 @@ class SolverMenuFrame(Frame):
         """Update the maze being rendered."""
         if shortestPath:
             self.shortestPath = shortestPath
+
         self.maze_widget.BFS = self.BFS
         self.maze_widget.shortestPath = self.shortestPath
         self.maze_widget.randomColor = randomColor
-        self.maze_widget.compute(maze)
+
+        sizeX = len(maze)
+        sizeY = len(maze[0])
+
+        # Set the desired interval for saving frames
+        save_interval = (
+            sizeX * sizeY // self.maze_widget.max_fps // 4
+        )  # Save a frame every 10 iterations
+
+        if self.buffer_iterator % save_interval == 0:
+            self.maze_widget.compute(maze)
+
+        self.buffer_iterator += 1
 
     def run_generation(self):
         sizeX = len(self.maze)
@@ -185,7 +183,8 @@ class SolverMenuFrame(Frame):
         self.BFS = False
         self.DFS = False
         self.shortestPath = []
-
+        # self.update_maze(self.maze, randomColor=True, shortestPath=[])
+        # self.maze_widget.update(0)
         self.maze = generateLabyrinth(sizeX, sizeY)
         mergeMazeGeneration(self.maze, sizeX, sizeY, self)
 
@@ -195,6 +194,24 @@ class SolverMenuFrame(Frame):
         clearLabyrinth(self.maze)
 
         self.update_maze(self.maze)
+        self.maze_widget.compute(self.maze)
+
+        self.maze_widget.needs_update = True
+
+    def run_place_start_and_goal(self):
+        sizeX = len(self.maze)
+        sizeY = len(self.maze[0])
+        self.maze_widget.needs_update = False
+        self.BFS = False
+        self.DFS = False
+        self.shortestPath = []
+        self.update_maze(self.maze, randomColor=True, shortestPath=[])
+        clearLabyrinth(self.maze, True)
+        [start, goal] = addRandomStartAndGoal(self.maze, sizeX, sizeY)
+        self.start = start
+        self.goal = goal
+        self.update_maze(self.maze)
+        self.maze_widget.compute(self.maze)
         self.maze_widget.needs_update = True
 
     def run_bfs(self):
@@ -214,6 +231,7 @@ class SolverMenuFrame(Frame):
             self.start = start
 
         BFS(self.screen, self.maze, maze_effect=self, start=self.start)
+        self.maze_widget.compute(self.maze)
 
         self.shortestPath = displayShortestPath(self.maze, self.goal, maze_effect=self)
         self.maze_widget.needs_update = True
@@ -235,6 +253,7 @@ class SolverMenuFrame(Frame):
 
         # Run the DFS algorithm
         DFS(self.screen, self.maze, self, self.start)
+        self.maze_widget.compute(self.maze)
         self.maze_widget.needs_update = True
 
     def quit(self):

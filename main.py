@@ -23,7 +23,7 @@ def check_if_maze_fits(maze_width, maze_height):
     available_height = terminal_height - 15
 
     # Check if the maze fits
-    if maze_width > available_width // 5.5 or maze_height > available_height:
+    if maze_width > available_width or maze_height > available_height:
         return False, available_width, available_height
     return True, available_width, available_height
 
@@ -77,7 +77,7 @@ def Main(screen):
     screen.refresh()
 
     # Prompt the user to adjust zoom if necessary
-    prompt_for_zoom(screen, sizeX, sizeY)
+    # prompt_for_zoom(screen, sizeX, sizeY)
     screen = Screen.open()
     # Validate the input
     if sizeX is None or sizeY is None:
