@@ -1,12 +1,15 @@
 from collections import deque
-from asciimatics.screen import Screen
 from generation import checkBounds
 from maze_constants import EMPTY, VISITED, BADWAY, GOAL, START, WALL
 
 
-def print_step(maze, maze_effect, shortest_path=[], randomColor=False, refresh=False):
+def print_step(
+    maze, maze_effect, shortest_path=[], randomColor=False, refresh=False, queue_size=0
+):
     """Update the maze and refresh the screen."""
-    maze_effect.update_maze(maze, randomColor=randomColor, shortestPath=shortest_path)
+    maze_effect.update_maze(
+        maze, randomColor=randomColor, shortestPath=shortest_path, queue_size=queue_size
+    )
 
     if refresh:
         maze_effect.maze_widget.need_update = True
@@ -86,13 +89,13 @@ def BFS(maze, maze_effect, start=[0, 0], step=0):
 
         # If goal is found, return
         if maze[x][y] == GOAL:
-            print_step(maze, maze_effect)
+            print_step(maze, maze_effect, queue_size=len(queue))
             return
 
         # Visit current cell
         if maze[x][y] == EMPTY or str(maze[x][y]).isdigit():
             visit(maze, curPos, step)
-            print_step(maze, maze_effect)
+            print_step(maze, maze_effect, queue_size=len(queue))
             step += 1
 
         # Add all valid neighbors to the queue
@@ -133,6 +136,8 @@ def compute_shortest_path(maze, goal, maze_effect):
         next_cell = None
         min_value = 999999
         for neighbor in neighbors:
+            # If the neighbor is the start, add it to the path
+            # and return
             if (
                 checkBounds(maze, neighbor[0], neighbor[1])
                 and maze[neighbor[0]][neighbor[1]] == START
@@ -141,19 +146,18 @@ def compute_shortest_path(maze, goal, maze_effect):
                 shortest_path.append(next_cell)
                 print_step(maze, maze_effect, shortest_path=shortest_path)
                 return shortest_path
+            # If the neighbor is a digit, check if it is the smallest
             if isdigit(maze, neighbor[0], neighbor[1]):
                 if next_cell is None or maze[neighbor[0]][neighbor[1]] < min_value:
                     next_cell = neighbor
 
                     min_value = maze[neighbor[0]][neighbor[1]]
 
+        # If a next cell was found, add it to the path
         if next_cell:
             x, y = next_cell
             maze[x][y] = VISITED
             shortest_path.append(next_cell)
-            print_step(maze, maze_effect, shortest_path=shortest_path)
-        else:
-            # No next cell found, break the loop
-            break
+    print_step(maze, maze_effect, shortest_path=shortest_path)
 
     return shortest_path

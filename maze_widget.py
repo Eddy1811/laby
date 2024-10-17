@@ -1,14 +1,15 @@
-from asciimatics.widgets import Widget
-from asciimatics.screen import Screen
-from collections import deque
-import time
-import os
 import math
+import os
 import random
+import time
+from collections import deque
 from threading import Thread
+from threading import Condition
 
+from asciimatics.screen import Screen
+from asciimatics.widgets import Widget
 
-from maze_constants import WALL, VISITED, START, COLOR_MAP, EMPTY
+from maze_constants import COLOR_MAP, EMPTY, START, VISITED, WALL
 
 
 def getFixedWidth(width, height):
@@ -158,6 +159,15 @@ class MazeWidget(Widget):
 
         self.last_maze = None
 
+    def dump_buffer(self):
+        """Print the last maze in the buffer"""
+        if len(self.buffer) != 0:
+            self._draw(self.buffer.pop()[0])
+            self._frame.canvas.refresh()
+            self._frame.screen.refresh()
+            self.buffer.clear()
+            self.thread.join()
+
     def update_thread(self):
         if hasattr(self, "thread") and self.thread is not None:
             if self.thread.is_alive():
@@ -177,7 +187,7 @@ class MazeWidget(Widget):
         self.buffer.append([copy, [self.random_color, self.BFS, shortest_path]])
         # Dump the buffer if it's full
         # Use another thread to update the screen
-        if len(self.buffer) == self.buffer_size:
+        if len(self.buffer) >= self.buffer_size:
             self.update_thread()
 
     def update(self, frame_no):
@@ -233,8 +243,6 @@ class MazeWidget(Widget):
             # time.sleep(1 / self.max_fps)
         elif not self.buffer:
             self._draw(self._maze)
-
-        self.thread = None
 
     @property
     def value(self):
