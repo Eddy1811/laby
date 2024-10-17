@@ -3,7 +3,10 @@ from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError
 import os
 
-from display import MazeInputFrame, MazeSolverScene, SolverMenuFrame
+
+from maze_input_frame import MazeInputFrame
+from solver_menu_frame import SolverMenuFrame
+from maze_solver_scene import MazeSolverScene
 
 
 # Function to get terminal size
