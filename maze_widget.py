@@ -1,9 +1,11 @@
 from asciimatics.widgets import Widget
 from asciimatics.screen import Screen
+from collections import deque
 import time
 import os
 import math
 import random
+from threading import Thread
 
 
 from maze_constants import WALL, VISITED, START, COLOR_MAP, EMPTY
@@ -117,28 +119,66 @@ class MazeWidget(Widget):
         self._maze = maze
         self._required_height = height
         self._required_width = width
-        self.randomColor = randomColor
+        self.random_color = randomColor
         self.BFS = BFS
-        self.shortestPath = shortestPath or []
+        self.shortest_path = shortestPath or []
 
         self.needs_update = True
         self.buffer_length = 0
 
         self.frame_no = 0
         self.start_time = time.time()
-        self.buffer = []
+
+        ## Buffer settings
+        # Buffer to store the frames
+        # Size is influenced by the size of the maze and the max_fps
+        # The more complex the maze, the bigger the buffer
+        # The higher the max_fps, the smaller the buffer
+        overload_factor = (
+            1.1  # adjust this factor to control the level of buffer overload
+        )
+
+        self.buffer_size = int(
+            (height * width) ** 0.5 / (max_fps**0.5 + 1) * overload_factor
+        )
+        self.buffer = deque(maxlen=self.buffer_size)
+
+        # The interval to save the maze in the buffer
+        # The higher the interval, the more frames are skipped
+        # Influenced by the size of the maze and the max
+        self.save_interval = (len(maze) * len(maze[0])) // (max_fps * 2)
+
+        if self.save_interval % self.buffer_size == 0:
+            self.save_interval = 1
+
         self.buffer_length = 0
-        self.settings_buffer = []
         self.max_fps = max_fps
+
         self.noSpaces = True
 
         self.last_maze = None
 
+    def update_thread(self):
+        if hasattr(self, "thread") and self.thread is not None:
+            if self.thread.is_alive():
+                time.sleep(1 / self.max_fps)
+                return
+            self.thread = Thread(target=self.update, args=(self.frame_no,))
+            self.thread.start()
+        else:
+            self.thread = Thread(target=self.update, args=(self.frame_no,))
+            self.thread.start()
+        time.sleep(1 / self.max_fps)
+
     def compute(self, maze):
         # Compute the maze all at once and store the result in the buffer
         copy = [row[:] for row in maze]
-        self.buffer.append(copy)
-        self.settings_buffer.append([self.randomColor, self.BFS, self.shortestPath])
+        shortest_path = [row[:] for row in self.shortest_path]
+        self.buffer.append([copy, [self.random_color, self.BFS, shortest_path]])
+        # Dump the buffer if it's full
+        # Use another thread to update the screen
+        if len(self.buffer) == self.buffer_size:
+            self.update_thread()
 
     def update(self, frame_no):
         # Draw the current frame from the buffer
@@ -148,17 +188,44 @@ class MazeWidget(Widget):
         while self.buffer:
             # Depending on maze size, we might need to skip some frames
 
-            self.last_settings = self.settings_buffer.pop(0)
-            self.randomColor = self.last_settings[0]
+            self.last_maze = self.buffer.popleft()
+            self.last_settings = self.last_maze[1]
+            self.last_maze = self.last_maze[0]
+            self.random_color = self.last_settings[0]
             self.BFS = self.last_settings[1]
-            self.shortestPath = self.last_settings[2]
-            self.last_maze = self.buffer.pop(0)
+            self.shortest_path = self.last_settings[2]
             self._draw(self.last_maze)
-            self._frame.canvas.refresh()
-            self._frame.screen.refresh()
-            # time.sleep(1 / self.max_fps)
-            time.sleep(1 / self.max_fps)
 
+            self._frame.canvas.print_at(
+                f"Buffer length: {len(self.buffer)}".center(30),
+                10,
+                5,
+                colour=Screen.COLOUR_WHITE,
+                bg=Screen.COLOUR_BLACK,
+            )
+            self._frame.canvas.print_at(
+                f"Buffer max size: {self.buffer_size}".center(30),
+                10,
+                6,
+                colour=Screen.COLOUR_WHITE,
+                bg=Screen.COLOUR_BLACK,
+            )
+            self._frame.canvas.print_at(
+                f"Save interval: {self.save_interval}".center(30),
+                10,
+                7,
+                colour=Screen.COLOUR_WHITE,
+                bg=Screen.COLOUR_BLACK,
+            )
+            # Sleep to control the speed of the animation
+            # use buffer length to adjust the speed
+            self.frame.canvas.refresh()
+            self._frame.screen.refresh()
+            sleep_time = 1 / self.max_fps
+            time.sleep(sleep_time)
+
+        # If the buffer is empty, draw
+        # the last maze
         if not self.buffer and self.last_maze is not None:
             self._draw(self.last_maze)
             self._frame.canvas.refresh()
@@ -166,6 +233,8 @@ class MazeWidget(Widget):
             # time.sleep(1 / self.max_fps)
         elif not self.buffer:
             self._draw(self._maze)
+
+        self.thread = None
 
     @property
     def value(self):
@@ -185,7 +254,7 @@ class MazeWidget(Widget):
         if str(cell).isdigit():
             color = COLOR_MAP.get(VISITED, Screen.COLOUR_BLACK)
             # Add a random color, but same color for the same number
-            if self.randomColor:
+            if self.random_color:
                 possible_colours = [c for c in range(17, 231)]
 
                 color = possible_colours[hash(str(cell)) % 214]
@@ -193,18 +262,18 @@ class MazeWidget(Widget):
                     color = Screen.COLOUR_BLACK
 
             # If BFS is running, color the visited cells, from yellow to red, the farther the redder
-            if self.BFS and (cell == VISITED or str(cell).isdigit()):
+            if self.BFS and (cell == VISITED or str(cell).isdigit() or cell == EMPTY):
                 # Change color based on the scale
                 # the greater is the number, the redder is the color
                 # based on percentage of buffer done
-
                 if self.buffer_length != 0:
-                    percentage = int(cell) / self.buffer_length
+                    percentage = int(cell) / (sizeX * sizeY)
                 else:
                     percentage = 1
                 percentage = (1 - percentage) * 100
                 if percentage < 0:
                     percentage = 0
+
                 # check if terminal supports 256 colors
                 if (
                     os.getenv("TERM") == "xterm-256color"
@@ -215,10 +284,18 @@ class MazeWidget(Widget):
                     red = (255, 0, 0)
                     blue = (0, 0, 255)
                     cyan = (0, 255, 255)
-                    gradient_colors = create_gradient(cyan)
+                    brown = (165, 42, 42)
+                    orange = (255, 165, 0)
+                    green = (0, 255, 0)
+                    yellow = (255, 255, 0)
+
+                    gradient_colors = create_gradient(green)
+
+                    # invert the gradient colors
+                    gradient_colors = gradient_colors[::-1]
 
                     # Gradient_colors : brightest = index 0, darkest = index -1
-                    color = get_color_from_percentage(gradient_colors, percentage, 2)
+                    color = get_color_from_percentage(gradient_colors, percentage, 4)
 
                 else:
                     if percentage < 10:
@@ -230,7 +307,8 @@ class MazeWidget(Widget):
                     else:
                         color = Screen.COLOUR_CYAN
 
-            if self.shortestPath and [x, y] in self.shortestPath:
+            if self.shortest_path and [x, y] in self.shortest_path:
+                time.sleep(10)
                 color = Screen.COLOUR_GREEN
                 cell = VISITED
 
@@ -238,7 +316,7 @@ class MazeWidget(Widget):
 
             if (
                 cellWithoutSpaces == "0"
-                and not self.randomColor
+                and not self.random_color
                 and cellWithoutSpaces != VISITED
             ):
                 cell = START

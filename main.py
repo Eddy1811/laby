@@ -1,11 +1,9 @@
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
+from asciimatics.exceptions import ResizeScreenError
 import os
 
-from display import (
-    MazeInputFrame,
-    MazeSolverScene,
-)
+from display import MazeInputFrame, MazeSolverScene, SolverMenuFrame
 
 
 # Function to get terminal size
@@ -69,7 +67,7 @@ def Main(screen):
     # Retrieve width and height after scene has finished
     sizeX = user_input["width"] or 35
     sizeY = user_input["height"] or 35
-    sizeX = int(sizeX)
+    sizeX = int(int(sizeX) * 1.2)
     sizeY = int(sizeY)
 
     # Common settings for screen
@@ -77,23 +75,40 @@ def Main(screen):
     screen.refresh()
 
     # Prompt the user to adjust zoom if necessary
-    # prompt_for_zoom(screen, sizeX, sizeY)
+    prompt_for_zoom(screen, sizeX, sizeY)
     screen = Screen.open()
     # Validate the input
     if sizeX is None or sizeY is None:
         raise ValueError("Maze dimensions were not entered correctly!")
 
     # Generate maze and start/end positions
+    effects = [SolverMenuFrame(screen, sizeX, sizeY)]
 
     # Clear the screen and display the solver menu
-    scene = MazeSolverScene(screen, sizeX, sizeY)
-    # Play the solver menu
-    screen.play([scene])
+    scene = MazeSolverScene(screen, sizeX, sizeY, effects)
+    # Play the solver menu, stop on resize and restart on resize
 
-    # After finishing with the menu
-    # screen.clear()
-    screen.refresh()
+    while True:
+        try:
+            screen.play([scene], stop_on_resize=True)
+        except ResizeScreenError as e:
+            effect = scene.effects[0]
+            screen.clear()
+            effect.canvas.refresh()
+            effect.layout.reset()
+            effect.layout.fix(0, 0, screen.width, screen.height)
+            effect.fix()
+            screen = Screen.open()
+
+            # scene.reset(e.scene, screen)
+            screen.clear()
+            screen.refresh()
+            continue
 
 
 if __name__ == "__main__":
-    Screen.wrapper(Main)
+    try:
+        Screen.wrapper(Main)
+    except KeyboardInterrupt:
+        # Clean threads still running
+        os._exit(0)

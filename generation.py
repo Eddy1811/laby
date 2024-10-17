@@ -1,243 +1,125 @@
 from random import randint
+import random
+import time
 from maze_constants import WALL, VISITED, START, GOAL, EMPTY
 
 
-def printStep(maze, maze_effect, randomColor=False, shortestPath=[]):
+def printStep(maze, maze_effect, randomColor=False, shortestPath=[], refresh=False):
     """Update the maze and refresh the screen."""
-    maze_effect.update_maze(
-        maze,
-        randomColor=randomColor,
-        shortestPath=shortestPath,
-    )
+    maze_effect.update_maze(maze, randomColor=randomColor, shortestPath=shortestPath)
+    if refresh:
+        maze_effect.maze_widget.update(0)
 
 
 # Helper functions
 def checkBounds(maze, x, y):
-    sizeX = len(maze)
-    sizeY = len(maze[0])
-    return x < sizeX and y < sizeY and x >= 0 and y >= 0
+    return 0 <= x < len(maze) and 0 <= y < len(maze[0])
 
 
-def getNorth(x, y):
-    return [x, y - 1]
+def getNeighbors2(x, y):
+    return [[x, y - 2], [x + 2, y], [x, y + 2], [x - 2, y]]
 
 
-def getSouth(x, y):
-    return [x, y + 1]
-
-
-def getEast(x, y):
-    return [x + 1, y]
-
-
-def getWest(x, y):
-    return [x - 1, y]
-
-
-def getNorth2(x, y):
-    return [x, y - 2]
-
-
-def getSouth2(x, y):
-    return [x, y + 2]
-
-
-def getEast2(x, y):
-    return [x + 2, y]
-
-
-def getWest2(x, y):
-    return [x - 2, y]
-
-
-def visitEmpty(lab, pos):
-    x = pos[0]
-    y = pos[1]
-    lab[x][y] = VISITED
-
-
-def checkNotVisited(lab, pos):
-    sizeX = len(lab)
-    sizeY = len(lab[0])
-    x = pos[0]
-    y = pos[1]
-    if x >= sizeX or y >= sizeY or x < 0 or y < 0:
-        return False
-    return lab[x][y] == WALL
-
-
-def checkCaseGen(vec2, maze, width, height):
-    if vec2[0] >= width or vec2[1] >= height or vec2[0] < 0 or vec2[1] < 0:
-        return False
-    return maze[vec2[0]][vec2[1]] != WALL
+def checkNotVisited(lab, x, y):
+    return lab[x][y] == WALL if checkBounds(lab, x, y) else False
 
 
 def generateLabyrinth(width, height):
-    # Checkerboard
-    maze = []
-    emptyCount = 0
-    for i in range(width):
-        maze.append([])
-        for j in range(height):
-            if j % 2 == 0 and i % 2 == 0:
-                maze[i].append(emptyCount)
-                emptyCount += 1
-            else:
-                maze[i].append(WALL)
+    maze = [
+        [
+            WALL if (i % 2 == 1 or j % 2 == 1) else i * height // 2 + j // 2
+            for j in range(height)
+        ]
+        for i in range(width)
+    ]
     return maze
 
 
-def generationDone(maze, width, height):
-    value = -1
-    for i in range(width):
-        if maze[i][0] != WALL:
-            value = maze[i][0]
-            break
-    for i in range(width):
-        for j in range(height):
-            if maze[i][j] != WALL and maze[i][j] != value:
-                return False
-    return True
-
-
-def mergeMazeGeneration(maze, width, height, maze_effect):
-    posX = -1
-    posY = -1
-    value = " "
-    # screen.clear()
-    # Tant que la case n'est pas un chiffre ou qu'il n'y a pas de cases possibles
-    # On en cherche une nouvelle
-    # On regarde si les cases autour de la case sont de la même valeur
-    # Si non, on ajoute les cases possibles
-    # On en choisi une aléatoirement
+def mergeMazeGeneration(maze, width, height, maze_effect, chance=0.1):
     done = False
+
+    first_step = True
+
     while not done:
-        possibleCases = []
-        while not str(value).isdigit() or len(possibleCases) == 0:
-            possibleCases = []
-            posX = randint(0, width - 1)
-            posY = randint(0, height - 1)
+        # Pick a random valid cell
+        while True:
+            if first_step:
+                posX, posY = (
+                    randint(0, width // 2 - 1) * 2,
+                    randint(0, height // 2 - 1) * 2,
+                )
+                first_step = False
+            else:
+                posX, posY = (
+                    randint(0, width - 1),
+                    randint(0, height - 1),
+                )
+                while maze[posX][posY] == WALL:
+                    posX, posY = (
+                        randint(0, width - 1),
+                        randint(0, height - 1),
+                    )
+
             value = maze[posX][posY]
+            neighbors = getNeighbors2(posX, posY)
 
-            directions = [
-                getNorth2(posX, posY),
-                getEast2(posX, posY),
-                getSouth2(posX, posY),
-                getWest2(posX, posY),
+            # Filter valid neighboring cells
+            possibleCases = [
+                n
+                for n in neighbors
+                if checkBounds(maze, n[0], n[1])
+                and (maze[n[0]][n[1]] != value or random.random() <= chance)
+                and maze[n[0]][n[1]] != WALL
             ]
-            chance = randint(0, 100)
+            if possibleCases:
+                break
 
-            for direction in directions:
-                if checkCaseGen(direction, maze, width, height):
-                    if maze[direction[0]][direction[1]] != value or chance < 10:
-                        possibleCases.append(direction)
-
-        # On choisi une case aléatoire parmis les cases possibles
+        # Choose a random neighboring cell
         nextCase = possibleCases[randint(0, len(possibleCases) - 1)]
+        nextX, nextY = nextCase
+        wallX, wallY = (posX + nextX) // 2, (posY + nextY) // 2
 
-        # for nextCase in possibleCases:
-        nextX = nextCase[0]
-        nextY = nextCase[1]
+        # Merge cells and update the maze
+        newValue = min(maze[posX][posY], maze[nextX][nextY])
+        oldValue = max(maze[posX][posY], maze[nextX][nextY])
 
-        # On regarde la différence entre la case actuelle et la case suivante
-        diffX = nextX - posX
-        diffY = nextY - posY
-
-        wallDeleteX = posX
-        wallDeleteY = posY
-
-        # On regarde si on doit supprimer un mur
-        if diffX != 0:
-            if diffX > 0:
-                wallDeleteX = posX + 1
-            else:
-                wallDeleteX = posX - 1
-        if diffY != 0:
-            if diffY > 0:
-                wallDeleteY = posY + 1
-            else:
-                wallDeleteY = posY - 1
-
-        # to update the value of the cells in the path to the minimum value
-        # This is done to ensure that the maze is solvable
-        min = maze[posX][posY]
-        if maze[nextX][nextY] < min:
-            min = maze[nextX][nextY]
-        max = maze[posX][posY]
-        if maze[nextX][nextY] > max:
-            max = maze[nextX][nextY]
-        done = True
         for i in range(width):
             for j in range(height):
-                if maze[i][j] == max:
-                    maze[i][j] = min
-                if done and (str(maze[i][j]) != "0" and maze[i][j] != WALL):
-                    done = False
+                if maze[i][j] == oldValue:
+                    maze[i][j] = newValue
 
-        # On supprime le mur
-        maze[wallDeleteX][wallDeleteY] = min
+        # Update the wall between the two cells
+        maze[wallX][wallY] = newValue
+
+        # Update the maze and render the step (with random color effect)
         printStep(maze, maze_effect, randomColor=True)
 
-
-def clearLabyrinth(lab, clearStartAndGoal=False):
-    for i in range(len(lab)):
-        for j in range(len(lab[i])):
-            if lab[i][j] != WALL and (
-                lab[i][j] != START and lab[i][j] != GOAL or clearStartAndGoal
-            ):
-                lab[i][j] = EMPTY
+        # Check if all cells are merged (i.e., no different values)
+        done = all(
+            maze[i][j] in (WALL, newValue) for i in range(width) for j in range(height)
+        )
 
 
-def addRandomStartAndGoal(maze, width, height):
-    start = [randint(0, width - 1), randint(0, height - 1)]
-    goal = [randint(0, width - 1), randint(0, height - 1)]
-    while maze[start[0]][start[1]] == WALL:
-        start = [randint(0, width - 1), randint(0, height - 1)]
-    while maze[goal[0]][goal[1]] == WALL:
-        goal = [randint(0, width - 1), randint(0, height - 1)]
-    maze[start[0]][start[1]] = START
-    maze[goal[0]][goal[1]] = GOAL
+def clear_maze(lab, clearStartAndGoal=False):
+    for row in lab:
+        for i in range(len(row)):
+            if row[i] != WALL and (clearStartAndGoal or row[i] not in (START, GOAL)):
+                row[i] = EMPTY
+
+
+def append_start_and_goal(maze, width, height):
+    start, goal = None, None
+
+    while not start:
+        sX, sY = randint(0, width - 1), randint(0, height - 1)
+        if maze[sX][sY] != WALL:
+            start = [sX, sY]
+            maze[sX][sY] = START
+
+    while not goal:
+        gX, gY = randint(0, width - 1), randint(0, height - 1)
+        if maze[gX][gY] != WALL and [gX, gY] != start:
+            goal = [gX, gY]
+            maze[gX][gY] = GOAL
+
     return [start, goal]
-
-
-def checkCaseIsDigit(maze, pos):
-    x, y = pos[0], pos[1]
-    if not checkBounds(maze, x, y):
-        return False
-    return (str(maze[x][y]).isdigit() or maze[x][y] == VISITED) and str(
-        maze[x][y]
-    ) != WALL
-
-
-def displayShortestPath(maze, goal, maze_effect):
-    curPos = goal
-    x, y = curPos[0], curPos[1]
-    shortestPath = []
-    while str(maze[x][y]) != "0" or maze[x][y] == START:
-        shortestPath.append([x + 1, y + 1])
-
-        possibleMoves = []
-        if checkCaseIsDigit(maze, getNorth(x, y)):
-            possibleMoves.append(getNorth(x, y))
-        if checkCaseIsDigit(maze, getEast(x, y)):
-            possibleMoves.append(getEast(x, y))
-        if checkCaseIsDigit(maze, getSouth(x, y)):
-            possibleMoves.append(getSouth(x, y))
-        if checkCaseIsDigit(maze, getWest(x, y)):
-            possibleMoves.append(getWest(x, y))
-
-        nextCase = None
-        min_val = 10000000
-        for move in possibleMoves:
-            moveValue = int(maze[move[0]][move[1]])
-            if moveValue < min_val:
-                nextCase = move
-                min_val = moveValue
-
-        if nextCase is None:
-            return
-
-        x, y = nextCase[0], nextCase[1]
-
-        printStep(maze, maze_effect=maze_effect, shortestPath=shortestPath)
-    return shortestPath
