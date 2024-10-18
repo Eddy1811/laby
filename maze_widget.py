@@ -157,7 +157,9 @@ class MazeWidget(Widget):
         self.buffer_length = 0
         self.max_fps = max_fps
 
-        self.noSpaces = True
+        self.no_spaces = True
+
+        self.color_only = True
 
         self.last_maze = None
 
@@ -243,6 +245,7 @@ class MazeWidget(Widget):
             # use buffer length to adjust the speed
             self.frame.canvas.refresh()
             self._frame.screen.refresh()
+            self._frame.screen.force_update()
             sleep_time = 1 / self.max_fps
             time.sleep(sleep_time)
 
@@ -309,7 +312,7 @@ class MazeWidget(Widget):
                     green = (0, 255, 0)
                     yellow = (255, 255, 0)
 
-                    gradient_colors = create_gradient(green)
+                    gradient_colors = create_gradient(red)
 
                     # invert the gradient colors
                     gradient_colors = gradient_colors[::-1]
@@ -332,47 +335,39 @@ class MazeWidget(Widget):
                 color = Screen.COLOUR_GREEN
                 cell = VISITED
 
-            if cell == START:
-                self._frame.canvas.print_at(
-                    f"{START}".center(fixedWidth),
-                    start_x + x * fixedWidth,
-                    start_y + y,
-                    colour=color,
-                )
-            else:
-                self._frame.canvas.print_at(
-                    f"{EMPTY}".center(fixedWidth),
-                    start_x + x * fixedWidth,
-                    start_y + y,
-                    colour=color,
-                    bg=color,
-                )
+            self._frame.canvas.print_at(
+                f"{cell if not self.color_only else EMPTY}".center(fixedWidth),
+                start_x + x * fixedWidth,
+                start_y + y,
+                colour=color,
+                bg=color if self.color_only else Screen.COLOUR_BLACK,
+            )
         else:
             if sizeX % 2 == 0:
                 if x < sizeX - 1:
                     self._frame.canvas.print_at(
-                        f"{EMPTY}".center(fixedWidth),
+                        f"{cell if not self.color_only else EMPTY}".center(fixedWidth),
                         start_x + x * fixedWidth,
                         start_y + y,
                         colour=color,
-                        bg=color,
+                        bg=color if self.color_only else Screen.COLOUR_BLACK,
                     )
             elif sizeY % 2 == 0:
                 if y < sizeY - 1:
                     self._frame.canvas.print_at(
-                        f"{EMPTY}".center(fixedWidth),
+                        f"{cell if not self.color_only else EMPTY}".center(fixedWidth),
                         start_x + x * fixedWidth,
                         start_y + y,
                         colour=color,
-                        bg=color,
+                        bg=color if self.color_only else Screen.COLOUR_BLACK,
                     )
             else:
                 self._frame.canvas.print_at(
-                    f"{EMPTY}".center(fixedWidth),
+                    f"{cell if not self.color_only else EMPTY}".center(fixedWidth),
                     start_x + x * fixedWidth,
                     start_y + y,
                     colour=color,
-                    bg=color,
+                    bg=color if self.color_only else Screen.COLOUR_BLACK,
                 )
 
     def _draw(self, maze):
@@ -394,10 +389,12 @@ class MazeWidget(Widget):
         sizeY = len(laby_with_walls[0])
 
         fixedWidth = getFixedWidth(sizeX, sizeY)
-        if self.noSpaces:
+        if self.no_spaces:
             fixedWidth = 2
+
+        widget_location = self.get_location()
         start_x = (self._frame.canvas.width - (sizeX * fixedWidth)) // 2
-        start_y = (self._frame.canvas.height - sizeY) // 2
+        start_y = (self._frame.canvas.height - sizeY + widget_location[1]) // 2
 
         for i in range(sizeY):
             for j in range(sizeX):

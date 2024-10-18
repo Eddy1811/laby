@@ -3,11 +3,11 @@ from asciimatics.screen import Screen
 # Labyrinth Symbols
 EMPTY = "  "
 # WALL = "##"
-WALL = "🟫"
-VISITED = "🐾"
-BADWAY = "🍫"
-GOAL = "🦴"
-START = "🐶"
+WALL = "##"
+VISITED = "**"
+BADWAY = "XX"
+GOAL = "VV"
+START = "SS"
 # Define the colors (asciimatics uses integers for colors)
 COLOR_MAP = {
     WALL: Screen.COLOUR_WHITE,  # WALL BROWN

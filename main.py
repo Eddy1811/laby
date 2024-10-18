@@ -1,6 +1,7 @@
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError
+from asciimatics.exceptions import StopApplication
 import os
 
 
@@ -20,7 +21,7 @@ def check_if_maze_fits(maze_width, maze_height):
     terminal_width, terminal_height = get_terminal_size()
 
     # Leave some space for borders and other UI elements
-    available_width = terminal_width - 4
+    available_width = terminal_width // 2
     available_height = terminal_height - 15
 
     # Check if the maze fits
@@ -36,16 +37,35 @@ def prompt_for_zoom(screen, maze_width, maze_height):
         maze_width, maze_height
     )
 
-    # Adjust the terminal size
-    # Zoom in/out the terminal based on the maze size
     while not fits:
         terminal = get_terminal_size()
         prompt = f"Please zoom out the terminal to fit the maze (current size: {terminal.columns}x{terminal.lines})."
-        prompt2 = f"\nMaze size: {maze_width}x{maze_height}"
-        prompt3 = f"\nAvailable size: {available_width}x{available_height}"
-        screen.print_at(prompt, 10, 10)
-        screen.print_at(prompt2, 10, 12)
-        screen.print_at(prompt3, 10, 14)
+        prompt2 = f"Maze size: {maze_width}x{maze_height}"
+        prompt3 = f"Available size: {available_width}x{available_height}"
+        instructions = "Use Ctrl + - to zoom out, Ctrl + + to zoom in."
+
+        # Calculate the position to center the box
+        box_width = max(len(prompt), len(prompt2), len(prompt3), len(instructions)) + 4
+        box_height = 7
+        start_x = (terminal.columns - box_width) // 2
+        start_y = (terminal.lines - box_height) // 2
+
+        # Draw the box
+        for y in range(start_y, start_y + box_height):
+            for x in range(start_x, start_x + box_width):
+                if y in (start_y, start_y + box_height - 1) or x in (
+                    start_x,
+                    start_x + box_width - 1,
+                ):
+                    screen.print_at("█", x, y)
+                else:
+                    screen.print_at(" ", x, y)
+
+        # Print the prompts inside the box
+        screen.print_at(prompt.center(box_width - 2), start_x + 1, start_y + 1)
+        screen.print_at(prompt2.center(box_width - 2), start_x + 1, start_y + 2)
+        screen.print_at(prompt3.center(box_width - 2), start_x + 1, start_y + 3)
+        screen.print_at(instructions.center(box_width - 2), start_x + 1, start_y + 5)
 
         # Wait for user input (Ctrl + - to zoom out, Ctrl + + to zoom in)
         screen.refresh()
@@ -88,30 +108,41 @@ def Main(screen):
     effects = [SolverMenuFrame(screen, sizeX, sizeY)]
 
     # Clear the screen and display the solver menu
-    scene = MazeSolverScene(screen, sizeX, sizeY, effects)
+    scenes = [Scene(effects, -1)]
+    scene = None
     # Play the solver menu, stop on resize and restart on resize
 
     while True:
         try:
-            screen.play([scene], stop_on_resize=True)
+            screen.play(
+                scenes,
+                stop_on_resize=True,
+                start_scene=scene,
+                allow_int=True,
+            )
+            quit()
         except ResizeScreenError as e:
-            effect = scene.effects[0]
-            screen.clear()
-            effect.canvas.refresh()
-            effect.layout.reset()
-            effect.layout.fix(0, 0, screen.width, screen.height)
-            effect.fix()
-            screen = Screen.open()
-
-            # scene.reset(e.scene, screen)
+            """ ResizeScreenError is raised when the screen is resized """
+            """ Resize the screen and prompt for zoom """
+            # Common settings for screen
             screen.clear()
             screen.refresh()
+
+            scene = e.scene
+            screen.set_scenes([scene])
+            prompt_for_zoom(screen, sizeX, sizeY)
+
+            screen.clear()
+            screen.refresh()
+            screen.force_update()
+
             continue
 
 
 if __name__ == "__main__":
     try:
         Screen.wrapper(Main)
+        quit()
     except KeyboardInterrupt:
         # Clean threads still running
         os._exit(0)

@@ -96,16 +96,12 @@ class SolverMenuFrame(Frame):
         )
 
     def _update(self, frame_no):
-        # self.update_maze(self.maze, randomColor=False, shortestPath=self.shortestPath)
-        if self._screen.has_resized():
-            self.screen.clear()
-            self.screen.force_update(full_refresh=True)
-            self.screen.refresh()
-            self.fix()
-            self.last_screen_size = get_terminal_size()
-        if self.maze_widget.needs_update:
-            self.maze_widget.update(frame_no)
-            self.screen.refresh()
+        if (
+            hasattr(self.maze_widget, "thread")
+            and self.maze_widget.thread is not None
+            and self.maze_widget.thread.is_alive()
+        ):
+            return
         super(SolverMenuFrame, self)._update(frame_no)
 
     def update_maze(self, maze, randomColor=False, shortestPath=[], queue_size=0):
