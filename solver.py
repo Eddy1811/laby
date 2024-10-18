@@ -1,192 +1,163 @@
-# Labyrinth Symbols
-EMPTY = "▮"
-WALL = "🟫"
-VISITED = "🐾"
-BADWAY = "🍫"
-GOAL = "🦴"
-START = "🐶"
+from collections import deque
+from generation import checkBounds
+from maze_constants import EMPTY, VISITED, BADWAY, GOAL, START, WALL
 
 
-def printStep(maze, maze_effect, shortestPath=[], randomColor=False):
+def print_step(
+    maze, maze_effect, shortest_path=[], randomColor=False, refresh=False, queue_size=0
+):
     """Update the maze and refresh the screen."""
-    maze_effect.update_maze(maze, randomColor=randomColor, shortestPath=shortestPath)
+    maze_effect.update_maze(
+        maze, randomColor=randomColor, shortestPath=shortest_path, queue_size=queue_size
+    )
+
+    if refresh:
+        maze_effect.maze_widget.need_update = True
+        maze_effect.maze_widget.update(0)
 
 
-def checkBounds(maze, x, y):
-    sizeX = len(maze)
-    sizeY = len(maze[0])
-    return x < sizeX and y < sizeY and x >= 0 and y >= 0
+def check_bounds(maze, x, y):
+    """Check if a position is within maze bounds."""
+    return 0 <= x < len(maze) and 0 <= y < len(maze[0])
 
 
-def getNorth(x, y):
-    return [x, y - 1]
+def get_neighbors(x, y):
+    """Get the four possible neighbors (N, E, S, W)."""
+    return [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]
 
 
-def getSouth(x, y):
-    return [x, y + 1]
-
-
-def getEast(x, y):
-    return [x + 1, y]
-
-
-def getWest(x, y):
-    return [x - 1, y]
-
-
-def checkCase(maze, x, y):
-    return maze[x][y] == EMPTY
-
-
-def checkCaseVec(maze, vec2):
-    if not checkBounds(maze, vec2[0], vec2[1]):
-        return False
-    return maze[vec2[0]][vec2[1]] == EMPTY or maze[vec2[0]][vec2[1]] == GOAL
+def check_cell(maze, vec2):
+    """Check if the given vector position is traversable or is the goal."""
+    x, y = vec2
+    return check_bounds(maze, x, y) and (maze[x][y] == EMPTY or maze[x][y] == GOAL)
 
 
 def visit(maze, pos, step):
-    # if step < 10:
-    #    step = f"0{step}"
+    """Mark a cell as visited with the current step."""
     maze[pos[0]][pos[1]] = step
 
 
-def badWay(maze, pos):
-    x = pos[0]
-    y = pos[1]
-    maze[x][y] = BADWAY
+def bad_way(maze, pos):
+    """Mark a cell as part of a bad way."""
+    maze[pos[0]][pos[1]] = BADWAY
 
 
-path = []
+def DFS(maze, maze_effect, start=[0, 0], step=0):
+    """Non-recursive Depth-First Search (DFS) implementation."""
+    path = [start]
+    visit(maze, start, step)
+    print_step(maze, maze_effect)
 
+    while path:
+        curPos = path[-1]
+        x, y = curPos
 
-# def DFS_recurse(maze, start=[0, 0], step=0):
-#    curPos = start
-#    x = curPos[0]
-#    y = curPos[1]
-#
-#    maze_effect = LabyrinthEffect(screen, maze)
-#    if step == 0:
-#        visit(maze, curPos, step)
-#        step += 1
-#        path.append(curPos)
-#        printStep(maze, path, maze_effect)
-#
-#    if checkCaseVec(maze, getNorth(x, y)):
-#        nextCase = getNorth(x, y)
-#    elif checkCaseVec(maze, getEast(x, y)):
-#        nextCase = getEast(x, y)
-#    elif checkCaseVec(maze, getSouth(x, y)):
-#        nextCase = getSouth(x, y)
-#    elif checkCaseVec(maze, getWest(x, y)):
-#        nextCase = getWest(x, y)
-#    else:
-#        badWay(maze, curPos)
-#        path.pop()
-#        printStep(screen, maze, maze_effect)
-#        DFS(maze, path[len(path) - 1], step)
-#        return
-#
-#    if maze[nextCase[0]][nextCase[1]] == GOAL:
-#        visit(maze, nextCase, step)
-#        path.append(nextCase)
-#        # print("WIN")
-#        # print("Longueur du chemin trouvé: ", len(path))
-#        return
-#
-#    path.append(nextCase)
-#    visit(maze, nextCase, step)
-#    printStep(screen, maze, maze_effect)
-#
-#    DFS(maze, nextCase, step + 1)
+        # Try to find a valid neighboring cell
+        nextCase = None
+        for neighbor in get_neighbors(x, y):
+            if check_cell(maze, neighbor):
+                nextCase = neighbor
+                break
 
-
-# Non récursif
-def DFS(screen, maze, maze_effect, start=[0, 0], step=0):
-    curPos = start
-    x = curPos[0]
-    y = curPos[1]
-
-    path = []
-    if step == 0:
-        visit(maze, curPos, step)
-        step += 1
-        path.append(curPos)
-        printStep(maze, maze_effect)
-
-    while maze[x][y] != GOAL:
-        x = curPos[0]
-        y = curPos[1]
-
-        if checkCaseVec(maze, getNorth(x, y)):
-            nextCase = getNorth(x, y)
-        elif checkCaseVec(maze, getEast(x, y)):
-            nextCase = getEast(x, y)
-        elif checkCaseVec(maze, getSouth(x, y)):
-            nextCase = getSouth(x, y)
-        elif checkCaseVec(maze, getWest(x, y)):
-            nextCase = getWest(x, y)
-        else:
-            badWay(maze, curPos)
-            path.pop()
-            printStep(maze, maze_effect)
-            step += 1
-            if len(path) == 0:
-                raise Exception("No solution")
-            curPos = path[len(path) - 1]
-            continue
-
-        if maze[nextCase[0]][nextCase[1]] == GOAL:
-            # visit(maze, nextCase, step)
+        if nextCase:
+            if maze[nextCase[0]][nextCase[1]] == GOAL:
+                path.append(nextCase)
+                print_step(maze, maze_effect)
+                return
+            # Move to the next valid cell
             path.append(nextCase)
-            # print("WIN")
-            # print("Longueur du chemin trouvé: ", len(path) - 1)
-            return
+            step += 1
+            visit(maze, nextCase, step)
+            print_step(maze, maze_effect)
+        else:
+            # Backtrack
+            bad_way(maze, curPos)
+            path.pop()
+            print_step(maze, maze_effect)
 
-        path.append(nextCase)
-        visit(maze, nextCase, step)
-        printStep(maze, maze_effect)
-        step += 1
-        curPos = nextCase
+    raise Exception("No solution")
 
 
-def BFS(screen, maze, maze_effect, start=[0, 0], step=0):
-    queue = []
-    screen.force_update()
+def BFS(maze, maze_effect, start=[0, 0], step=0):
+    """Breadth-First Search (BFS) implementation."""
+    queue = deque([start])
+    visited = set([tuple(start)])  # To avoid revisiting cells
 
-    queue.append(start)
     while queue:
-        curPos = queue.pop(0)
+        curPos = queue.popleft()
+        x, y = curPos
 
-        while (
-            str(maze[curPos[0]][curPos[1]]).isdigit()
-            or maze[curPos[0]][curPos[1]] == VISITED
-        ):
-            curPos = queue.pop(0)
-
-        x = curPos[0]
-        y = curPos[1]
+        # If goal is found, return
         if maze[x][y] == GOAL:
-            # print("WIN")
-            # print("Longueur du chemin trouvé: ", step)
-            # visit(maze, curPos, step)
-            printStep(maze, maze_effect=maze_effect)
-
-            # displayShortestPath(screen, maze, curPos, path)
-            # Return goal coordinates
-            # return curPos
+            print_step(maze, maze_effect, queue_size=len(queue))
             return
-        if checkCaseVec(maze, getNorth(x, y)):
-            nextCase = getNorth(x, y)
-            queue.append(nextCase)
-        if checkCaseVec(maze, getEast(x, y)):
-            nextCase = getEast(x, y)
-            queue.append(nextCase)
-        if checkCaseVec(maze, getSouth(x, y)):
-            nextCase = getSouth(x, y)
-            queue.append(nextCase)
-        if checkCaseVec(maze, getWest(x, y)):
-            nextCase = getWest(x, y)
-            queue.append(nextCase)
-        visit(maze, curPos, step)
-        printStep(maze, maze_effect)
-        step += 1
+
+        # Visit current cell
+        if maze[x][y] == EMPTY or str(maze[x][y]).isdigit():
+            visit(maze, curPos, step)
+            print_step(maze, maze_effect, queue_size=len(queue))
+            step += 1
+
+        # Add all valid neighbors to the queue
+        for neighbor in get_neighbors(x, y):
+            if check_cell(maze, neighbor) and tuple(neighbor) not in visited:
+                visited.add(tuple(neighbor))
+                queue.append(neighbor)
+
+    raise Exception("No solution")
+
+
+def isdigit(maze, x, y):
+    if check_bounds(maze, x, y):
+        return (
+            str(maze[x][y]).isdigit()
+            and maze[x][y] != GOAL
+            and maze[x][y] != START
+            and maze[x][y] != VISITED
+            and maze[x][y] != WALL
+        )
+    return False
+
+
+def compute_shortest_path(maze, goal, maze_effect):
+    x, y = goal
+    shortest_path = [goal]
+
+    while maze[x][y] != START and (str(maze[x][y]).isdigit() or maze[x][y] != 0):
+        cell = maze[x][y]
+
+        if str(cell).isdigit():
+            cell = int(cell)
+
+        # Get the neighbors of the current cell
+        # and find the one with the smallest value
+        # to move towards the start
+        neighbors = get_neighbors(x, y)
+        next_cell = None
+        min_value = 999999
+        for neighbor in neighbors:
+            # If the neighbor is the start, add it to the path
+            # and return
+            if (
+                checkBounds(maze, neighbor[0], neighbor[1])
+                and maze[neighbor[0]][neighbor[1]] == START
+            ):
+                next_cell = neighbor
+                shortest_path.append(next_cell)
+                print_step(maze, maze_effect, shortest_path=shortest_path)
+                return shortest_path
+            # If the neighbor is a digit, check if it is the smallest
+            if isdigit(maze, neighbor[0], neighbor[1]):
+                if next_cell is None or maze[neighbor[0]][neighbor[1]] < min_value:
+                    next_cell = neighbor
+
+                    min_value = maze[neighbor[0]][neighbor[1]]
+
+        # If a next cell was found, add it to the path
+        if next_cell:
+            x, y = next_cell
+            maze[x][y] = VISITED
+            shortest_path.append(next_cell)
+    print_step(maze, maze_effect, shortest_path=shortest_path)
+
+    return shortest_path
