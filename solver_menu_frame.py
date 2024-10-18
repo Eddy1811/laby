@@ -10,6 +10,7 @@ from maze_widget import MazeWidget
 from solver import BFS, DFS, compute_shortest_path
 import time
 import os
+from asciimatics.screen import Screen
 
 
 # Function to get terminal size
@@ -64,6 +65,36 @@ class SolverMenuFrame(Frame):
         self.layout.add_widget(self.maze_widget, 0)
         self.fix()
 
+    def print_infos(self):
+        self.canvas.print_at(
+            f"Buffer length: {len(self.maze_widget.buffer)}".center(30),
+            10,
+            2,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self.canvas.print_at(
+            f"Buffer max size: {self.maze_widget.buffer_size}".center(30),
+            10,
+            3,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self.canvas.print_at(
+            f"Save interval: {self.maze_widget.save_interval}".center(30),
+            10,
+            4,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self.canvas.print_at(
+            f"Total frames: {self.maze_widget.total_frames}".center(30),
+            10,
+            5,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+
     def _update(self, frame_no):
         # self.update_maze(self.maze, randomColor=False, shortestPath=self.shortestPath)
         if self._screen.has_resized():
@@ -83,6 +114,8 @@ class SolverMenuFrame(Frame):
         self.update_maze_widget_attributes(randomColor, shortestPath)
         self.set_save_interval(queue_size)
         self.dump_buffer_and_compute_maze(maze)
+        self.maze_widget.total_frames += 1
+        self.print_infos()
 
     def set_shortest_path(self, shortestPath):
         """Set the shortest path if it exists."""
@@ -100,7 +133,7 @@ class SolverMenuFrame(Frame):
         maze_size = len(self.maze) * len(self.maze[0])
         self.maze_widget.save_interval = maze_size // 100
 
-        if self.BFS and queue_size > 0:
+        if self.BFS and queue_size > 0 and not self.maze_widget.shortest_path:
             buffer_length = len(self.maze_widget.buffer)
             self.maze_widget.save_interval = queue_size
 
@@ -130,6 +163,7 @@ class SolverMenuFrame(Frame):
         self.BFS = False
         self.DFS = False
         self.shortestPath = []
+        self.maze_widget.total_frames = 0
         # self.update_maze(self.maze, randomColor=True, shortestPath=[])
         # self.maze_widget.update(0)
         self.maze = generateLabyrinth(sizeX, sizeY)
@@ -144,14 +178,6 @@ class SolverMenuFrame(Frame):
         self.maze_widget.compute(self.maze)
         self.maze_widget.update_thread()
 
-        while (
-            not self.maze_widget.thread is None and self.maze_widget.thread.is_alive()
-        ):
-            time.sleep(1 / self.maze_widget.max_fps)
-
-        self.screen.clear()
-        self.screen.refresh()
-
     def dump_buffer(self):
         self.maze_widget.dump_buffer()
 
@@ -159,6 +185,7 @@ class SolverMenuFrame(Frame):
         sizeX = len(self.maze)
         sizeY = len(self.maze[0])
         self.maze_widget.needs_update = False
+        self.maze_widget.total_frames = 0
         self.BFS = False
         self.DFS = False
         self.shortestPath = []
@@ -171,21 +198,12 @@ class SolverMenuFrame(Frame):
         self.maze_widget.compute(self.maze)
         self.maze_widget.update_thread()
 
-        while (
-            not self.maze_widget.thread is None
-            and self.maze_widget.thread.is_alive()
-            or self.maze_widget.buffer != []
-        ):
-            if self.maze_widget.buffer != []:
-                self.dump_buffer()
-            time.sleep(1 / self.maze_widget.max_fps)
-
-        self.screen.clear()
         self.screen.refresh()
 
     def run_bfs(self):
         # Run the BFS algorithm
         clear_maze(self.maze)
+        self.maze_widget.total_frames = 0
         self.BFS = True
         self.DFS = False
         self.shortestPath = []
@@ -202,16 +220,9 @@ class SolverMenuFrame(Frame):
         self.maze_widget.compute(self.maze)
         self.maze_widget.update_thread()
 
-        while (
-            not self.maze_widget.thread is None and self.maze_widget.thread.is_alive()
-        ):
-            time.sleep(1 / self.maze_widget.max_fps)
-
-        self.screen.clear()
-        self.screen.refresh()
-
     def run_dfs(self):
         clear_maze(self.maze)
+        self.maze_widget.total_frames = 0
         self.DFS = True
         self.BFS = False
         self.shortestPath = []

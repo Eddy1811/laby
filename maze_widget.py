@@ -127,6 +127,8 @@ class MazeWidget(Widget):
         self.needs_update = True
         self.buffer_length = 0
 
+        self.total_frames = 0
+
         self.frame_no = 0
         self.start_time = time.time()
 
@@ -190,6 +192,36 @@ class MazeWidget(Widget):
         if len(self.buffer) >= self.buffer_size:
             self.update_thread()
 
+    def print_infos(self):
+        self._frame.canvas.print_at(
+            f"Buffer length: {len(self.buffer)}".center(30),
+            10,
+            2,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self._frame.canvas.print_at(
+            f"Buffer max size: {self.buffer_size}".center(30),
+            10,
+            3,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self._frame.canvas.print_at(
+            f"Save interval: {self.save_interval}".center(30),
+            10,
+            4,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+        self._frame.canvas.print_at(
+            f"Total frames: {self.total_frames}".center(30),
+            10,
+            5,
+            colour=Screen.COLOUR_WHITE,
+            bg=Screen.COLOUR_BLACK,
+        )
+
     def update(self, frame_no):
         # Draw the current frame from the buffer
         self.buffer_length = (
@@ -206,27 +238,7 @@ class MazeWidget(Widget):
             self.shortest_path = self.last_settings[2]
             self._draw(self.last_maze)
 
-            self._frame.canvas.print_at(
-                f"Buffer length: {len(self.buffer)}".center(30),
-                10,
-                5,
-                colour=Screen.COLOUR_WHITE,
-                bg=Screen.COLOUR_BLACK,
-            )
-            self._frame.canvas.print_at(
-                f"Buffer max size: {self.buffer_size}".center(30),
-                10,
-                6,
-                colour=Screen.COLOUR_WHITE,
-                bg=Screen.COLOUR_BLACK,
-            )
-            self._frame.canvas.print_at(
-                f"Save interval: {self.save_interval}".center(30),
-                10,
-                7,
-                colour=Screen.COLOUR_WHITE,
-                bg=Screen.COLOUR_BLACK,
-            )
+            self.print_infos()
             # Sleep to control the speed of the animation
             # use buffer length to adjust the speed
             self.frame.canvas.refresh()
@@ -319,15 +331,6 @@ class MazeWidget(Widget):
                 time.sleep(10)
                 color = Screen.COLOUR_GREEN
                 cell = VISITED
-
-            cellWithoutSpaces = str(cell).replace(" ", "")
-
-            if (
-                cellWithoutSpaces == "0"
-                and not self.random_color
-                and cellWithoutSpaces != VISITED
-            ):
-                cell = START
 
             if cell == START:
                 self._frame.canvas.print_at(
